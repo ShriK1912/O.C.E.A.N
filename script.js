@@ -6,7 +6,7 @@
 /* ── Config ── */
 const TOTAL_FRAMES = 100;
 const SCROLL_MULTIPLIER = 5; // px of scroll per frame
-const FRAME_PATH = (n) => `ezgif-frame-${String(n).padStart(3, '0')}.jpg`;
+const FRAME_PATH = (n) => `frames/ezgif-frame-${String(n).padStart(3, '0')}.jpg`;
 
 const SCENES = [
   {
