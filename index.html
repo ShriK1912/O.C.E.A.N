@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>O.C.E.A.N | Offshore Culprit Evaluation &amp; Attribution Network</title>
+  <meta name="description" content="O.C.E.A.N (Offshore Culprit Evaluation &amp; Attribution Network) is an end-to-end AI &amp; oceanographic physics pipeline for marine oil spill detection, hindcasting, and vessel attribution using multi-modal satellite remote sensing and AIS data." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ═══ NAVBAR ═══ -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <div class="nav-logo">
+        <div class="logo-icon">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <circle cx="14" cy="14" r="13" stroke="#00d4ff" stroke-width="1.5"/>
+            <path d="M7 14 Q14 6 21 14 Q14 22 7 14Z" fill="#00d4ff" opacity="0.3"/>
+            <circle cx="14" cy="14" r="3" fill="#00d4ff"/>
+            <path d="M14 4 L14 7M14 21 L14 24M4 14 L7 14M21 14 L24 14" stroke="#00d4ff" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="logo-text">O.C.E.<span class="logo-accent">A.N</span></span>
+      </div>
+      <div class="nav-links">
+        <a href="#scene-1" class="nav-link">Problem</a>
+        <a href="#scene-3" class="nav-link">Detection</a>
+        <a href="#scene-4" class="nav-link">Tracking</a>
+        <a href="#scene-5" class="nav-link">Attribution</a>
+        <a href="demo.html" class="nav-cta" id="nav-demo-btn">View Demo</a>
+      </div>
+      <button class="nav-hamburger" id="navHamburger" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ═══ HERO SECTION ═══ -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        <span>SIH 2026 — Offshore Culprit Evaluation &amp; Attribution Network</span>
+      </div>
+      <h1 class="hero-title">
+        No spill goes<br/>
+        <span class="gradient-text">untraced.</span>
+        <div class="hero-acronym">O.C.E.A.N</div>
+      </h1>
+      <p class="hero-subtitle">
+        <strong style="color:var(--accent-cyan);font-size:0.9em">Offshore Culprit Evaluation &amp; Attribution Network</strong><br/>
+        AI-powered satellite remote sensing &amp; hydrodynamic hindcasting<br class="desktop-break"/>
+        engine that identifies and attributes marine oil spills to their source vessel.
+      </p>
+      <div class="hero-scroll-cta">
+        <span>Scroll to explore the system</span>
+        <div class="scroll-arrow">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M9 3 L9 15M4 10 L9 15 L14 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-card">
+        <div class="stat-value">10<span class="stat-unit">K+</span></div>
+        <div class="stat-label">Monte Carlo Particles</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">&lt;2<span class="stat-unit">s</span></div>
+        <div class="stat-label">SAR Inference Time</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">4<span class="stat-unit">x</span></div>
+        <div class="stat-label">VSI Factor Scoring</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ SCROLL ANIMATION SECTION ═══ -->
+  <section class="scroll-container" id="scrollContainer">
+    <!-- Fixed canvas for frame animation -->
+    <div class="sticky-frame" id="stickyFrame">
+      <canvas id="animCanvas"></canvas>
+
+      <!-- OVERLAY PANELS — shown at specific frame ranges -->
+
+      <!-- Scene 1: Ship sailing — Problem Statement (frames 1–18) -->
+      <div class="overlay-panel panel-left" id="panel-1" data-start="0" data-end="18">
+        <div class="panel-tag">The Threat</div>
+        <h2 class="panel-title">Invisible Crimes<br/>in International Waters</h2>
+        <p class="panel-body">
+          Every year, thousands of tonnes of oil are illegally dumped into the world's oceans by non-compliant vessels — in plain sight, yet completely undetected.
+        </p>
+        <div class="panel-metrics">
+          <div class="metric"><span class="metric-num">4M+</span><span class="metric-desc">tonnes spilled annually</span></div>
+          <div class="metric"><span class="metric-num">~3%</span><span class="metric-desc">cases successfully prosecuted</span></div>
+        </div>
+      </div>
+
+      <!-- Scene 2: Oil discharge / hull crack (frames 19–46) -->
+      <div class="overlay-panel panel-right" id="panel-2" data-start="19" data-end="46">
+        <div class="panel-tag">The Event</div>
+        <h2 class="panel-title">Discharge<br/>Detected</h2>
+        <p class="panel-body">
+          Intentional bilge-water dumping and structural ruptures release hydrocarbon slicks that spread with ocean currents. AIS transponders are switched off to evade detection.
+        </p>
+        <div class="tech-pills">
+          <span class="tech-pill">MARPOL 73/78 Violation</span>
+          <span class="tech-pill">AIS Dark Vessel</span>
+          <span class="tech-pill">Bilge Discharge</span>
+        </div>
+      </div>
+
+      <!-- Scene 3: High altitude / clouds / zoom out (frames 47–64) -->
+      <div class="overlay-panel panel-center" id="panel-3" data-start="47" data-end="64">
+        <div class="panel-tag">Phase I — Detection</div>
+        <h2 class="panel-title">Sentinel-1 C-SAR<br/>Scans the Ocean</h2>
+        <p class="panel-body">
+          EcoTrace ingests multi-spectral SAR imagery from Sentinel-1, 2 &amp; 3. Our U-Net deep learning model segments oil slicks and filters look-alikes using physics-gated met-ocean thresholds.
+        </p>
+        <div class="tech-pills">
+          <span class="tech-pill">Sentinel-1 SAR</span>
+          <span class="tech-pill">U-Net Segmentation</span>
+          <span class="tech-pill">ERA5 Wind Filter</span>
+        </div>
+      </div>
+
+      <!-- Scene 4: Satellite with radar screen (frames 65–84) -->
+      <div class="overlay-panel panel-left" id="panel-4" data-start="65" data-end="84">
+        <div class="panel-tag">Phase II — Hindcasting</div>
+        <h2 class="panel-title">Hydrodynamic<br/>Reverse Advection</h2>
+        <p class="panel-body">
+          PyGNOME's Lagrangian particle engine runs <strong>10,000 reverse trajectories</strong> through CMEMS ocean current fields, computing a calibrated 2D probability cone pointing back to the spill origin.
+        </p>
+        <div class="equation-block">
+          <span class="eq-label">Monte Carlo Diffusion:</span>
+          <span class="eq-text">dX = u(x,t)dt + √(2K<sub>h</sub>dt) · ξ</span>
+        </div>
+      </div>
+
+      <!-- Scene 5: Full forensic dashboard (frames 85–100) -->
+      <div class="overlay-panel panel-right" id="panel-5" data-start="85" data-end="100">
+        <div class="panel-tag">Phase III — Attribution</div>
+        <h2 class="panel-title">Vessel Suspicion<br/>Index Computed</h2>
+        <p class="panel-body">
+          Spatial AIS queries rank every vessel that intersected the origin polygon. The 4-factor VSI score — proximity, speed anomaly, AIS gap, vessel type — pinpoints the offender.
+        </p>
+        <div class="vsi-breakdown">
+          <div class="vsi-bar"><span class="vsi-label">Spatial Proximity</span><div class="vsi-track"><div class="vsi-fill" style="width:40%">40%</div></div></div>
+          <div class="vsi-bar"><span class="vsi-label">Speed Anomaly</span><div class="vsi-track"><div class="vsi-fill" style="width:25%">25%</div></div></div>
+          <div class="vsi-bar"><span class="vsi-label">AIS Evasion Gap</span><div class="vsi-track"><div class="vsi-fill" style="width:25%">25%</div></div></div>
+          <div class="vsi-bar"><span class="vsi-label">Vessel Risk Profile</span><div class="vsi-track"><div class="vsi-fill" style="width:10%">10%</div></div></div>
+        </div>
+      </div>
+
+      <!-- Progress indicator -->
+      <div class="frame-progress" id="frameProgress">
+        <div class="progress-bar" id="progressBar"></div>
+        <div class="progress-dots" id="progressDots">
+          <button class="prog-dot active" data-frame="0" title="Overview"></button>
+          <button class="prog-dot" data-frame="19" title="Discharge"></button>
+          <button class="prog-dot" data-frame="47" title="Detection"></button>
+          <button class="prog-dot" data-frame="65" title="Hindcasting"></button>
+          <button class="prog-dot" data-frame="85" title="Attribution"></button>
+        </div>
+      </div>
+
+      <!-- Scene labels at bottom -->
+      <div class="scene-label" id="sceneLabel">
+        <span id="sceneLabelText">Scene 1 / 5 — The Problem</span>
+      </div>
+    </div>
+
+    <!-- Scroll spacer — height controls animation duration -->
+    <div class="scroll-spacer"></div>
+  </section>
+
+  <!-- ═══ DEMO CTA SECTION ═══ -->
+  <section class="demo-cta-section" id="demoCta">
+    <div class="cta-background">
+      <div class="cta-grid-lines"></div>
+      <div class="cta-glow"></div>
+    </div>
+    <div class="cta-content">
+      <div class="cta-badge">
+        <span class="badge-dot pulse"></span>
+        <span>Live System — Ready for Demonstration</span>
+      </div>
+      <h2 class="cta-title">
+        See EcoTrace<br/>
+        <span class="gradient-text">in action.</span>
+      </h2>
+      <p class="cta-body">
+        Explore the full interactive dashboard with real satellite imagery, live hindcasting simulation, AIS vessel tracking, and the complete VSI attribution pipeline.
+      </p>
+      <div class="cta-feature-grid">
+        <div class="cta-feature">
+          <div class="feat-icon">🛰️</div>
+          <div class="feat-text">SAR Segmentation</div>
+        </div>
+        <div class="cta-feature">
+          <div class="feat-icon">🌊</div>
+          <div class="feat-text">Hindcast Simulation</div>
+        </div>
+        <div class="cta-feature">
+          <div class="feat-icon">🚢</div>
+          <div class="feat-text">AIS Attribution</div>
+        </div>
+        <div class="cta-feature">
+          <div class="feat-icon">⚖️</div>
+          <div class="feat-text">Evidence Dossier</div>
+        </div>
+      </div>
+      <a href="demo.html" class="demo-button" id="mainDemoBtn">
+        <span class="btn-text">View Actual Demo</span>
+        <span class="btn-icon">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M4 10 H16 M11 5 L16 10 L11 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <div class="btn-glow"></div>
+      </a>
+      <p class="cta-disclaimer">Powered by Sentinel-1/2/3 · CMEMS · PyGNOME · MarineCadastre AIS</p>
+    </div>
+  </section>
+
+  <!-- ═══ FOOTER ═══ -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-logo" style="flex-direction:column;gap:4px;align-items:center">
+        <div class="logo-icon small">
+          <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
+            <circle cx="14" cy="14" r="13" stroke="#00d4ff" stroke-width="1.5"/>
+            <path d="M7 14 Q14 6 21 14 Q14 22 7 14Z" fill="#00d4ff" opacity="0.3"/>
+            <circle cx="14" cy="14" r="3" fill="#00d4ff"/>
+          </svg>
+        </div>
+        <span style="font-size:1.1rem;font-family:'Space Grotesk',sans-serif;font-weight:700">O.C.E.A.N</span>
+        <span style="font-size:0.68rem;color:var(--text-muted)">Offshore Culprit Evaluation &amp; Attribution Network</span>
+      </div>
+      <div class="footer-tech">
+        <span>Sentinel-1 SAR</span>
+        <span>·</span>
+        <span>PyGNOME</span>
+        <span>·</span>
+        <span>PostGIS</span>
+        <span>·</span>
+        <span>CMEMS</span>
+        <span>·</span>
+        <span>U-Net AI</span>
+      </div>
+      <div class="footer-note">Built for Smart India Hackathon 2026 · MARPOL 73/78 Enforcement Pipeline</div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
