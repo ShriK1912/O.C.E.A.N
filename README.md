@@ -93,13 +93,3 @@ To run this project locally, follow these steps:
    The application will start on `http://127.0.0.1:5000/`.
 
 ---
-
-## ⚖️ Compliance
-
-Built to enforce **MARPOL 73/78** — the International Convention for the Prevention of Pollution from Ships.
-
----
-
-## 👤 Author
-
-**Shri K.** — SIH 2026 Team
