@@ -10,6 +10,8 @@ import json
 import subprocess
 from flask import Flask, request, jsonify, send_file, send_from_directory
 
+from dossier_generator import generate_dossier
+
 app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -228,6 +230,53 @@ def detect():
         return jsonify({"status": "error", "message": "Detection timed out (180s)"}), 504
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ─── API: enforcement dossier ────────────────────────────────
+
+@app.route("/api/generate-dossier", methods=["POST"])
+def generate_enforcement_dossier():
+    """Generate a PDF from current artifacts and frontend attribution state."""
+    payload = request.get_json(silent=True)
+    if payload is None:
+        return jsonify({"success": False, "error": "Expected a JSON request body."}), 400
+
+    attribution = payload.get("attribution", {})
+    if not isinstance(attribution, dict):
+        return jsonify({"success": False, "error": "Attribution data must be an object."}), 400
+
+    try:
+        result = generate_dossier(BASE_DIR, attribution)
+        return jsonify({
+            "success": True,
+            "filename": result["filename"],
+            "case_id": result["case_id"],
+            "download_url": f"/api/dossier/{result['filename']}",
+        })
+    except FileNotFoundError as e:
+        return jsonify({"success": False, "error": f"Required dossier artifact is missing: {e.filename}"}), 400
+    except (json.JSONDecodeError, ValueError) as e:
+        return jsonify({"success": False, "error": f"Dossier artifact is invalid: {e}"}), 400
+    except Exception as e:
+        print(f"[ERROR] Dossier generation failed: {e}")
+        return jsonify({"success": False, "error": "Unable to generate the enforcement dossier."}), 500
+
+
+@app.route("/api/dossier/<filename>", methods=["GET"])
+def download_dossier(filename):
+    """Serve only generated dossier PDFs from the dossier directory."""
+    import re
+
+    if not re.fullmatch(r"OCEAN_Enforcement_Dossier_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.pdf", filename):
+        return jsonify({"success": False, "error": "Invalid dossier filename."}), 400
+
+    dossier_dir = os.path.join(BASE_DIR, "dossier")
+    dossier_path = os.path.abspath(os.path.join(dossier_dir, filename))
+    if os.path.dirname(dossier_path) != os.path.abspath(dossier_dir):
+        return jsonify({"success": False, "error": "Invalid dossier path."}), 400
+    if not os.path.isfile(dossier_path):
+        return jsonify({"success": False, "error": "Dossier not found."}), 404
+    return send_from_directory(dossier_dir, filename, as_attachment=True, mimetype="application/pdf")
 
 
 # ─── API: hindcast ────────────────────────────────────────────

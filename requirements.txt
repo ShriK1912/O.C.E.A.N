@@ -8,3 +8,5 @@ rasterio
 tensorflow
 opencv-python-headless
 flask
+reportlab
+Pillow
