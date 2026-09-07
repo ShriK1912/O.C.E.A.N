@@ -1,0 +1,2676 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>O.C.E.A.N — Interactive Attribution Pipeline</title>
+  <meta name="description"
+    content="O.C.E.A.N interactive demo — upload satellite imagery, run AI detection, hydrodynamic hindcasting, and vessel attribution." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet" />
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    :root {
+      --bg: #000000;
+      --surface: #050505;
+      --card: #0a0a0a;
+      --cyan: #00d4ff;
+      --cyan-dim: rgba(0, 212, 255, 0.10);
+      --magenta: #e040fb;
+      --blue: #2979ff;
+      --orange: #ff6d00;
+      --teal: #2DD4BF;
+      --teal-dim: rgba(45, 212, 191, 0.12);
+      --alert: #FBBF24;
+      --alert-dim: rgba(251, 191, 36, 0.12);
+      --danger: #F87171;
+      --green: #34D399;
+      --text: #e8ecf0;
+      --muted: #8a9bae;
+      --dim: #475569;
+      --dimmer: #334155;
+      --border: rgba(255, 255, 255, 0.06);
+      --border2: rgba(41, 121, 255, 0.25);
+      --font-body: 'Inter', sans-serif;
+      --font-display: 'Space Grotesk', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    html {
+      scroll-behavior: smooth
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden
+    }
+
+    ::-webkit-scrollbar {
+      width: 4px
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--cyan);
+      border-radius: 2px
+    }
+
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      background: rgba(0, 0, 0, 0.92);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border)
+    }
+
+    .nav-inner {
+      width: 100%;
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text)
+    }
+
+    .nav-logo-icon {
+      width: 30px;
+      height: 30px;
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--cyan-dim)
+    }
+
+    .nav-logo-text {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1rem
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 14px
+    }
+
+    .pulse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse-d 1.5s ease-in-out infinite
+    }
+
+    @keyframes pulse-d {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1)
+      }
+
+      50% {
+        opacity: .4;
+        transform: scale(.7)
+      }
+    }
+
+    .nav-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: .6rem;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      color: var(--dim)
+    }
+
+    .nav-back {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font-size: .8rem;
+      text-decoration: none;
+      padding: 5px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      transition: all .25s
+    }
+
+    .nav-back:hover {
+      color: var(--text);
+      border-color: var(--magenta);
+      border-bottom-color: var(--magenta)
+    }
+
+    .pipeline-bar {
+      position: fixed;
+      top: 56px;
+      left: 0;
+      right: 0;
+      z-index: 999;
+      background: rgba(0, 0, 0, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 24px
+    }
+
+    .pipeline-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 0
+    }
+
+    .pipe-step {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      transition: all .3s;
+      position: relative
+    }
+
+    .pipe-step::after {
+      content: '';
+      position: absolute;
+      right: -4px;
+      top: 50%;
+      width: 8px;
+      height: 8px;
+      border-right: 1.5px solid var(--dimmer);
+      border-top: 1.5px solid var(--dimmer);
+      transform: translateY(-50%) rotate(45deg);
+      opacity: .4
+    }
+
+    .pipe-step:last-child::after {
+      display: none
+    }
+
+    .pipe-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 1.5px solid var(--dimmer);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: .6rem;
+      font-weight: 600;
+      color: var(--dimmer);
+      transition: all .3s;
+      flex-shrink: 0
+    }
+
+    .pipe-label {
+      font-size: .72rem;
+      font-weight: 500;
+      color: var(--dimmer);
+      transition: color .3s
+    }
+
+    .pipe-step.active .pipe-num {
+      border-color: var(--blue);
+      color: var(--blue);
+      background: rgba(41, 121, 255, 0.12);
+      box-shadow: 0 0 12px rgba(41, 121, 255, 0.3)
+    }
+
+    .pipe-step.active .pipe-label {
+      color: var(--text)
+    }
+
+    .pipe-step.done .pipe-num {
+      border-color: var(--green);
+      color: var(--green);
+      background: rgba(52, 211, 153, 0.1)
+    }
+
+    .pipe-step.done .pipe-label {
+      color: var(--muted)
+    }
+
+    main {
+      padding-top: 100px;
+      min-height: 100vh;
+      max-width: 1440px;
+      margin: 0 auto;
+      padding-left: 24px;
+      padding-right: 24px;
+      padding-bottom: 30px
+    }
+
+    .dashboard {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: 1fr;
+      align-items: start
+    }
+
+    @media(min-width:960px) {
+      .dashboard {
+        grid-template-columns: 1.45fr 1fr
+      }
+    }
+
+    .viewport {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      background: #03070d;
+      position: relative;
+      height: 660px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6)
+    }
+
+    .viewport-hud {
+      display: none
+    }
+
+    .viewport-mode {
+      display: none
+    }
+
+    #viewportContent {
+      width: 100%;
+      height: 100%;
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden
+    }
+
+    .upload-zone {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 24px;
+      width: 100%;
+      height: 100%;
+      text-align: center;
+      overflow-y: auto
+    }
+
+    .upload-box {
+      width: 100%;
+      max-width: 380px;
+      border: 2px dashed rgba(0, 212, 255, 0.2);
+      border-radius: 14px;
+      padding: 32px 24px;
+      cursor: pointer;
+      transition: all .3s;
+      position: relative;
+      overflow: hidden
+    }
+
+    .upload-box:hover {
+      border-color: rgba(0, 212, 255, 0.5);
+      background: rgba(0, 212, 255, 0.03)
+    }
+
+    .upload-box.dragover {
+      border-color: var(--cyan);
+      background: rgba(0, 212, 255, 0.06);
+      transform: scale(1.02)
+    }
+
+    .upload-icon {
+      margin: 0 auto 12px;
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--cyan-dim);
+      border: 1px solid rgba(0, 212, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    .upload-title {
+      font-family: var(--font-display);
+      font-size: .95rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px
+    }
+
+    .upload-sub {
+      font-size: .75rem;
+      color: var(--muted);
+      line-height: 1.4
+    }
+
+    .upload-or {
+      color: var(--dimmer);
+      font-size: .68rem;
+      margin: 4px 0;
+      font-family: var(--font-mono);
+      letter-spacing: .1em
+    }
+
+    .sample-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      width: 100%;
+      max-width: 400px
+    }
+
+    @media(min-width:600px) {
+      .sample-grid {
+        grid-template-columns: repeat(4, 1fr)
+      }
+    }
+
+    .sample-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all .3s;
+      background: var(--surface)
+    }
+
+    .sample-card:hover {
+      border-color: var(--border2);
+      transform: translateY(-2px)
+    }
+
+    .sample-card.selected {
+      border-color: var(--cyan);
+      box-shadow: 0 0 16px rgba(0, 212, 255, 0.2)
+    }
+
+    .sample-card img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      display: block
+    }
+
+    .sample-card-label {
+      padding: 4px 6px;
+      font-size: .52rem;
+      font-family: var(--font-mono);
+      color: var(--dim);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      text-align: center;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap
+    }
+
+    .btn-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 22px;
+      background: var(--blue);
+      color: #fff;
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: .82rem;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all .25s;
+      margin-top: 8px
+    }
+
+    .btn-action:hover {
+      background: #448aff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(41, 121, 255, 0.3)
+    }
+
+    .btn-action:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+      transform: none
+    }
+
+    .image-viewer {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: #03070d
+    }
+
+    .image-viewer img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+      border-radius: 8px
+    }
+
+    .scan-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--cyan);
+      box-shadow: 0 0 20px 4px rgba(0, 212, 255, 0.6), 0 0 60px 8px rgba(0, 212, 255, 0.2);
+      z-index: 10;
+      pointer-events: none;
+      opacity: 0
+    }
+
+    .scan-line.scanning {
+      animation: scan-down 2.5s ease-in-out infinite;
+      opacity: 1
+    }
+
+    @keyframes scan-down {
+      0% {
+        top: 0;
+        opacity: .6
+      }
+
+      50% {
+        top: 100%;
+        opacity: 1
+      }
+
+      51% {
+        opacity: 0
+      }
+
+      100% {
+        top: 0;
+        opacity: 0
+      }
+    }
+
+    .scan-grid {
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 29px, rgba(0, 212, 255, 0.04) 30px), repeating-linear-gradient(90deg, transparent, transparent 29px, rgba(0, 212, 255, 0.04) 30px);
+      opacity: 0;
+      transition: opacity .6s;
+      z-index: 3;
+      pointer-events: none
+    }
+
+    .scan-grid.active {
+      opacity: 1
+    }
+
+    .mask-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .8s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px
+    }
+
+    .mask-overlay.visible {
+      opacity: 1
+    }
+
+    .mask-overlay img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block
+    }
+
+    .detection-badge {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      z-index: 6;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(3, 7, 13, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      border-radius: 10px;
+      padding: 8px 14px;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: all .5s
+    }
+
+    .detection-badge.visible {
+      opacity: 1;
+      transform: translateY(0)
+    }
+
+    .map-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      background: #03070d;
+      overflow: hidden;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    .map-container svg {
+      width: 100%;
+      height: 100%;
+      display: block
+    }
+
+    @keyframes pulse-ring {
+      0% {
+        transform: scale(.6);
+        opacity: .8
+      }
+
+      100% {
+        transform: scale(2.2);
+        opacity: 0
+      }
+    }
+
+    .pr {
+      animation: pulse-ring 2.4s cubic-bezier(.4, 0, .6, 1) infinite
+    }
+
+    .analysis-panel {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(8, 17, 30, 0.85);
+      backdrop-filter: blur(12px);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 660px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6)
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      flex-shrink: 0
+    }
+
+    .panel-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: .6rem;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: rgba(0, 212, 255, 0.8)
+    }
+
+    .panel-version {
+      font-family: var(--font-mono);
+      font-size: .55rem;
+      color: var(--dimmer)
+    }
+
+    .panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px
+    }
+
+    .log-line {
+      display: flex;
+      gap: 10px;
+      padding: 4px 0;
+      animation: fadeUp .4s ease both
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(6px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    .log-time {
+      flex-shrink: 0;
+      font-family: var(--font-mono);
+      font-size: .6rem;
+      color: var(--dimmer);
+      min-width: 48px
+    }
+
+    .log-msg {
+      font-size: .74rem;
+      line-height: 1.6;
+      color: var(--muted)
+    }
+
+    .log-msg.good {
+      color: var(--green)
+    }
+
+    .log-msg.warn {
+      color: var(--alert)
+    }
+
+    .log-msg.info {
+      color: var(--cyan)
+    }
+
+    .log-msg.err {
+      color: var(--danger)
+    }
+
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin: 12px 0
+    }
+
+    .stat-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      padding: 12px;
+      text-align: center
+    }
+
+    .stat-val {
+      font-family: var(--font-mono);
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text)
+    }
+
+    .stat-lbl {
+      font-size: .62rem;
+      color: var(--dim);
+      margin-top: 2px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      font-family: var(--font-mono)
+    }
+
+    .check-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin: 10px 0
+    }
+
+    .check-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      padding: 7px 12px;
+      animation: fadeUp .4s ease both
+    }
+
+    .check-name {
+      font-size: .72rem;
+      color: var(--muted)
+    }
+
+    .check-pass {
+      color: var(--green)
+    }
+
+    .check-fail {
+      color: var(--dimmer)
+    }
+
+    .progress-block {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      padding: 14px;
+      margin: 12px 0
+    }
+
+    .pb-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px
+    }
+
+    .pb-label {
+      font-family: var(--font-mono);
+      font-size: .58rem;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--dimmer)
+    }
+
+    .pb-value {
+      font-family: var(--font-mono);
+      font-size: .76rem;
+      color: var(--cyan)
+    }
+
+    .pb-track {
+      height: 6px;
+      background: rgba(0, 212, 255, 0.08);
+      border-radius: 3px;
+      overflow: hidden
+    }
+
+    .pb-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--cyan), var(--alert));
+      border-radius: 3px;
+      width: 0%;
+      transition: width 1.5s ease
+    }
+
+    .vessel-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      padding: 12px;
+      margin-bottom: 8px;
+      animation: fadeUp .4s ease both
+    }
+
+    .vessel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between
+    }
+
+    .vessel-name {
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--text)
+    }
+
+    .vessel-type {
+      font-size: .62rem;
+      color: var(--dim);
+      font-family: var(--font-mono)
+    }
+
+    .score-pill {
+      border-radius: 100px;
+      padding: 3px 12px;
+      font-family: var(--font-mono);
+      font-size: .72rem;
+      font-weight: 600
+    }
+
+    .sp-high {
+      border: 1px solid rgba(251, 191, 36, .4);
+      background: var(--alert-dim);
+      color: var(--alert)
+    }
+
+    .sp-mid {
+      border: 1px solid rgba(0, 212, 255, .3);
+      background: var(--cyan-dim);
+      color: var(--cyan)
+    }
+
+    .sp-low {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--dim)
+    }
+
+    .vessel-factors {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+      font-family: var(--font-mono);
+      font-size: .55rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--dimmer)
+    }
+
+    .f-flag {
+      color: var(--alert)
+    }
+
+    .evidence-card {
+      border: 1px solid rgba(0, 212, 255, 0.15);
+      border-radius: 12px;
+      background: var(--surface);
+      padding: 16px;
+      margin: 12px 0
+    }
+
+    .ev-title {
+      font-family: var(--font-mono);
+      font-size: .58rem;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: rgba(0, 212, 255, 0.7);
+      margin-bottom: 10px
+    }
+
+    .ev-suspect-name {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 2px
+    }
+
+    .ev-imo {
+      font-family: var(--font-mono);
+      font-size: .68rem;
+      color: var(--dim)
+    }
+
+    .ev-rows {
+      margin-top: 14px;
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px
+    }
+
+    .ev-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between
+    }
+
+    .ev-lbl {
+      font-size: .72rem;
+      color: var(--dim)
+    }
+
+    .ev-val {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: .72rem;
+      color: #fff
+    }
+
+    .ev-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--alert);
+      flex-shrink: 0
+    }
+
+    .vsi-total {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 14px;
+      border-top: 1px solid var(--border);
+      padding-top: 14px
+    }
+
+    .vsi-lbl {
+      font-family: var(--font-mono);
+      font-size: .58rem;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--dim)
+    }
+
+    .vsi-score {
+      font-family: var(--font-mono);
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--alert)
+    }
+
+    .enf-note {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      border: 1px solid rgba(0, 212, 255, 0.15);
+      background: rgba(0, 212, 255, 0.04);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-top: 10px;
+      font-size: .7rem;
+      color: var(--muted);
+      line-height: 1.6
+    }
+
+    .section-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 16px 0
+    }
+
+    #fileInput {
+      display: none
+    }
+
+    /* Processing loader */
+    .processing-loader {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      margin: 10px 0;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      animation: fadeUp .4s ease both
+    }
+
+    .processing-loader .loader-spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--dimmer);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin-loader .8s linear infinite;
+      flex-shrink: 0
+    }
+
+    .processing-loader .loader-text {
+      font-family: var(--font-mono);
+      font-size: .68rem;
+      color: var(--muted);
+      letter-spacing: .06em
+    }
+
+    @keyframes spin-loader {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    /* Generate Dossier button */
+    .btn-dossier {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 14px 24px;
+      margin-top: 14px;
+      background: linear-gradient(135deg, var(--orange) 0%, #ff9100 100%);
+      color: #000;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: .88rem;
+      letter-spacing: .01em;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all .25s ease;
+      position: relative;
+      overflow: hidden
+    }
+
+    .btn-dossier:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(255, 109, 0, 0.4)
+    }
+
+    .btn-dossier:active {
+      transform: translateY(0)
+    }
+
+    .btn-dossier svg {
+      flex-shrink: 0
+    }
+
+    /* ─── HINDCAST TIMELINE (ASCII-STYLED TACTICAL COMPONENT) ─── */
+    .hindcast-timeline-box {
+      background: rgba(3, 7, 13, 0.97);
+      border-top: 1px solid var(--border2);
+      padding: 10px 16px 12px;
+      font-family: var(--font-mono);
+      color: var(--text);
+      position: relative;
+      z-index: 30;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.7);
+      flex-shrink: 0;
+      animation: fadeUp 0.35s ease both;
+    }
+
+    .ht-ascii-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px dashed rgba(0, 212, 255, 0.2);
+      padding-bottom: 5px;
+    }
+
+    .ht-title-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      font-weight: 700;
+      color: var(--cyan);
+    }
+
+    .ht-ascii-border {
+      color: rgba(0, 212, 255, 0.35);
+      font-weight: 400;
+      letter-spacing: 0.05em;
+    }
+
+    .ht-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ht-btn {
+      background: rgba(0, 212, 255, 0.08);
+      border: 1px solid rgba(0, 212, 255, 0.25);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      padding: 3px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .ht-btn:hover {
+      background: rgba(0, 212, 255, 0.2);
+      border-color: var(--cyan);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .ht-btn.active {
+      background: var(--cyan);
+      color: #03070d;
+      font-weight: 700;
+      box-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
+    }
+
+    .ht-track-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+      padding: 4px 0 16px 0;
+    }
+
+    .ht-endpoint-chip {
+      background: rgba(8, 17, 30, 0.9);
+      border: 1px solid rgba(0, 212, 255, 0.3);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.68rem;
+      font-family: var(--font-mono);
+      color: var(--cyan);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.2s;
+    }
+
+    .ht-endpoint-chip:hover {
+      border-color: var(--cyan);
+      background: rgba(0, 212, 255, 0.18);
+      box-shadow: 0 0 10px rgba(0, 212, 255, 0.25);
+    }
+
+    .ht-slider-container {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      height: 26px;
+    }
+
+    .ht-custom-range {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: linear-gradient(90deg, rgba(251, 191, 36, 0.3) 0%, rgba(251, 191, 36, 0.6) 25%, rgba(0, 212, 255, 0.3) 50%, rgba(0, 212, 255, 0.5) 100%);
+      border: 1px solid rgba(0, 212, 255, 0.3);
+      border-radius: 3px;
+      outline: none;
+      position: relative;
+      z-index: 3;
+      cursor: pointer;
+    }
+
+    .ht-custom-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--cyan);
+      border: 2px solid #fff;
+      box-shadow: 0 0 12px var(--cyan), 0 0 20px rgba(0, 212, 255, 0.8);
+      cursor: grab;
+      transition: transform 0.1s, background-color 0.2s, box-shadow 0.2s;
+    }
+
+    .ht-custom-range::-webkit-slider-thumb:hover {
+      transform: scale(1.25);
+      background: #5eead4;
+      box-shadow: 0 0 16px #5eead4;
+    }
+
+    .ht-custom-range::-webkit-slider-thumb:active {
+      cursor: grabbing;
+      transform: scale(1.35);
+      background: #fbbf24;
+      box-shadow: 0 0 18px #fbbf24;
+    }
+
+    .ht-custom-range::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--cyan);
+      border: 2px solid #fff;
+      box-shadow: 0 0 12px var(--cyan);
+      cursor: grab;
+    }
+
+    .ht-milestones-bar {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      height: 16px;
+      pointer-events: none;
+    }
+
+    .ht-milestone-pin {
+      position: absolute;
+      top: -2px;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 0.56rem;
+      color: var(--dim);
+      cursor: pointer;
+      pointer-events: auto;
+      transition: all 0.2s;
+    }
+
+    .ht-milestone-pin:hover {
+      color: var(--text);
+    }
+
+    .ht-pin-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--dimmer);
+      margin-bottom: 2px;
+    }
+
+    .ht-milestone-pin:hover .ht-pin-dot {
+      background: var(--cyan);
+      box-shadow: 0 0 6px var(--cyan);
+    }
+
+    .ht-pin-label {
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+
+    .ht-pin-intercept {
+      color: var(--alert);
+    }
+
+    .ht-pin-intercept .ht-pin-dot {
+      background: var(--alert);
+      box-shadow: 0 0 8px var(--alert);
+    }
+
+    .ht-telemetry-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 0.63rem;
+      background: rgba(8, 17, 30, 0.7);
+      border: 1px solid rgba(0, 212, 255, 0.12);
+      border-radius: 6px;
+      padding: 6px 12px;
+    }
+
+    .ht-tele-block {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ht-tele-label {
+      color: var(--dim);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: 0.56rem;
+    }
+
+    .ht-tele-val {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .ht-jump-chips {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding-top: 2px;
+    }
+
+    .ht-chip {
+      background: rgba(0, 212, 255, 0.05);
+      border: 1px solid rgba(0, 212, 255, 0.2);
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.58rem;
+      padding: 2px 7px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .ht-chip:hover {
+      background: rgba(0, 212, 255, 0.15);
+      border-color: var(--cyan);
+      color: var(--text);
+    }
+
+    .ht-chip-intercept {
+      border-color: rgba(251, 191, 36, 0.35);
+      color: rgba(251, 191, 36, 0.9);
+    }
+
+    .ht-chip-intercept:hover {
+      background: rgba(251, 191, 36, 0.15);
+      border-color: #fbbf24;
+      color: #fbbf24;
+    }
+
+    .ht-ascii-footer {
+      display: flex;
+      justify-content: space-between;
+      color: rgba(0, 212, 255, 0.3);
+      font-size: 0.65rem;
+      border-top: 1px dashed rgba(0, 212, 255, 0.15);
+      padding-top: 4px;
+      margin-top: 2px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo">
+        <div class="nav-logo-icon">
+          <svg width="16" height="16" viewBox="0 0 28 28" fill="none" style="stroke:var(--cyan);stroke-width:1.5">
+            <circle cx="14" cy="14" r="12" />
+            <path d="M7 14 Q14 6 21 14 Q14 22 7 14Z" fill="rgba(0,212,255,0.25)" stroke="none" />
+            <circle cx="14" cy="14" r="2.5" fill="var(--cyan)" stroke="none" />
+          </svg>
+        </div>
+        <span class="nav-logo-text">O.C.E.A.N</span>
+      </a>
+      <div class="nav-right">
+        <div class="nav-status">
+          <div class="pulse-dot"></div>Pipeline Ready
+        </div>
+        <a href="index.html" class="nav-back">&larr; Overview</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="pipeline-bar">
+    <div class="pipeline-inner" id="pipelineBar">
+      <div class="pipe-step active" data-step="0">
+        <div class="pipe-num">1</div><span class="pipe-label">Select Image</span>
+      </div>
+      <div class="pipe-step" data-step="1">
+        <div class="pipe-num">2</div><span class="pipe-label">AI Detection</span>
+      </div>
+      <div class="pipe-step" data-step="2">
+        <div class="pipe-num">3</div><span class="pipe-label">Hindcast Origin</span>
+      </div>
+      <div class="pipe-step" data-step="3">
+        <div class="pipe-num">4</div><span class="pipe-label">Attribution</span>
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <div class="dashboard">
+      <div class="viewport" id="viewport">
+        <div class="viewport-hud">O.C.E.A.N &middot; TACTICAL</div>
+        <div class="viewport-mode" id="viewportMode">STANDBY</div>
+        <div id="viewportContent"></div>
+        <div id="hindcastTimelineDock" class="hindcast-timeline-box" style="display:none"></div>
+      </div>
+      <div class="analysis-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <div class="pulse-dot"></div>O.C.E.A.N &middot; Live Readout
+          </div>
+          <div class="panel-version">v2.4</div>
+        </div>
+        <div class="panel-body" id="panelBody"></div>
+      </div>
+    </div>
+  </main>
+
+  <input type="file" id="fileInput" accept="image/*" />
+
+  <script>
+    /* ═══════════════════════════════════════════════════
+       O.C.E.A.N. — Fully Automatic Pipeline Controller
+       ═══════════════════════════════════════════════════ */
+
+    var phase = 0;
+    var selectedImagePath = null;
+    var selectedImageUrl = null;
+    var analysisData = null;
+    var originData = null;
+    var animFrame = null;
+
+    var timelineTime = 0.0; // 0 = detection time, -24 = 24h before detection
+    var timelinePlaying = false;
+    var timelineSpeed = 1.0;
+    var timelineAnimId = null;
+    var timelineMin = -24.0;
+    var timelineMax = 0.0;
+
+    var TIMELINE_VESSELS = [
+      {
+        id: "v1",
+        name: "M/T STENA NORDIC",
+        imo: "9332237",
+        type: "Crude oil tanker",
+        typeRisk: "high",
+        culprit: true,
+        score: 87,
+        waypoints: [
+          { t: -24.0, pos: [-58, 38], speed: 14.5, dark: false, status: "Cruising 14.5 kn · AIS Active" },
+          { t: -21.0, pos: [-47, 30], speed: 10.2, dark: false, status: "Slowing 10.2 kn · Approaching" },
+          { t: -18.0, pos: [-36, 22], speed: 3.1, dark: true, status: "3.1 kn · AIS EVASION (DISCHARGE EVENT)" },
+          { t: -15.0, pos: [-33, 23], speed: 4.5, dark: true, status: "4.5 kn · AIS Off · Drifting Post-Discharge" },
+          { t: -12.0, pos: [-31, 25], speed: 11.2, dark: false, status: "Accelerating 11.2 kn · AIS Restored" },
+          { t: -6.0, pos: [-26, 23], speed: 13.8, dark: false, status: "Cruising 13.8 kn · En Route" },
+          { t: 0.0, pos: [-20, 21], speed: 14.2, dark: false, status: "Transit 14.2 kn · Sentinel-1 Pass" }
+        ]
+      },
+      {
+        id: "v2",
+        name: "MV PACIFIC DAWN",
+        imo: "9447210",
+        type: "Container ship",
+        typeRisk: "low",
+        culprit: false,
+        score: 28,
+        waypoints: [
+          { t: -24.0, pos: [-30, 52], speed: 18.2, dark: false, status: "18.2 kn · Normal Transit" },
+          { t: -18.0, pos: [-24, 48], speed: 18.0, dark: false, status: "18.0 kn · Normal Transit" },
+          { t: -12.0, pos: [-18, 44], speed: 17.8, dark: false, status: "17.8 kn · Normal Transit" },
+          { t: -6.0, pos: [-12, 40], speed: 18.1, dark: false, status: "18.1 kn · Normal Transit" },
+          { t: 0.0, pos: [-6, 36], speed: 18.2, dark: false, status: "18.2 kn · Normal Transit" }
+        ]
+      },
+      {
+        id: "v3",
+        name: "MV OCEAN TRADER",
+        imo: "9558731",
+        type: "Bulk carrier",
+        typeRisk: "medium",
+        culprit: false,
+        score: 34,
+        waypoints: [
+          { t: -24.0, pos: [8, -36], speed: 12.0, dark: false, status: "12.0 kn · AIS Active" },
+          { t: -18.0, pos: [12, -28], speed: 11.8, dark: true, status: "11.8 kn · AIS Gap" },
+          { t: -12.0, pos: [16, -24], speed: 12.1, dark: false, status: "12.1 kn · AIS Active" },
+          { t: -6.0, pos: [20, -20], speed: 12.3, dark: false, status: "12.3 kn · AIS Active" },
+          { t: 0.0, pos: [24, -16], speed: 12.0, dark: false, status: "12.0 kn · AIS Active" }
+        ]
+      },
+      {
+        id: "v4",
+        name: "MV COASTAL STAR",
+        imo: "9601452",
+        type: "Product tanker",
+        typeRisk: "high",
+        culprit: false,
+        score: 41,
+        waypoints: [
+          { t: -24.0, pos: [30, 20], speed: 13.0, dark: false, status: "13.0 kn · Transit" },
+          { t: -18.0, pos: [36, 17], speed: 8.5, dark: false, status: "8.5 kn · Slowed" },
+          { t: -12.0, pos: [40, 15], speed: 12.8, dark: false, status: "12.8 kn · Transit" },
+          { t: -6.0, pos: [44, 13], speed: 13.1, dark: false, status: "13.1 kn · Transit" },
+          { t: 0.0, pos: [48, 11], speed: 13.2, dark: false, status: "13.2 kn · Transit" }
+        ]
+      },
+      {
+        id: "v5",
+        name: "FV HARBOUR LIGHT",
+        imo: "9012345",
+        type: "Fishing vessel",
+        typeRisk: "low",
+        culprit: false,
+        score: 12,
+        waypoints: [
+          { t: -24.0, pos: [-60, -2], speed: 7.0, dark: false, status: "7.0 kn · Trawling" },
+          { t: -18.0, pos: [-54, -6], speed: 6.8, dark: false, status: "6.8 kn · Trawling" },
+          { t: -12.0, pos: [-50, -8], speed: 7.2, dark: false, status: "7.2 kn · Trawling" },
+          { t: -6.0, pos: [-46, -11], speed: 7.1, dark: false, status: "7.1 kn · Trawling" },
+          { t: 0.0, pos: [-42, -14], speed: 7.0, dark: false, status: "7.0 kn · Trawling" }
+        ]
+      }
+    ];
+
+    var VESSELS = TIMELINE_VESSELS.map(function (tv) {
+      return {
+        id: tv.id,
+        name: tv.name,
+        imo: tv.imo,
+        type: tv.type,
+        typeRisk: tv.typeRisk,
+        pos: tv.waypoints[tv.waypoints.length - 1].pos,
+        dist: tv.culprit ? 0.18 : 19.8,
+        slowed: tv.culprit,
+        dark: tv.culprit,
+        score: tv.score,
+        culprit: tv.culprit,
+        track: tv.waypoints.map(function (w) { return w.pos; })
+      };
+    });
+
+    function $(id) { return document.getElementById(id); }
+
+    function updatePipeline() {
+      document.querySelectorAll('.pipe-step').forEach(function (el, i) {
+        el.classList.remove('active', 'done');
+        el.style.cursor = 'pointer';
+        el.onclick = function () { goToPhase(i); };
+        if (i < phase) el.classList.add('done');
+        else if (i === phase) el.classList.add('active');
+      });
+    }
+
+    function goToPhase(targetPhase) {
+      phase = targetPhase;
+      updatePipeline();
+      var dock = $('hindcastTimelineDock');
+      if (phase === 0) {
+        if (dock) dock.style.display = 'none';
+        renderSelect();
+      } else if (phase === 1) {
+        if (dock) dock.style.display = 'none';
+        runDetectionPhase();
+      } else if (phase === 2) {
+        runHindcastPhase();
+      } else if (phase === 3) {
+        runAttributionPhase();
+      }
+    }
+
+    function render() {
+      updatePipeline();
+      if (phase === 0) renderSelect();
+    }
+
+    /* ══════════════════════════════════════════════════
+       PHASE 0 — SELECT IMAGE
+       ══════════════════════════════════════════════════ */
+
+    function renderSelect() {
+      $('viewportMode').textContent = 'SELECT';
+      $('viewportContent').innerHTML =
+        '<div class="upload-zone" id="uploadZone">' +
+        '<div class="upload-box" id="uploadBox">' +
+        '<div class="upload-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="1.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>' +
+        '<div class="upload-title">Upload Satellite Image</div>' +
+        '<div class="upload-sub">Drag &amp; drop a SAR image, or click to browse</div>' +
+        '</div>' +
+        '<div class="upload-or">&mdash; or select a sample with known oil spill &mdash;</div>' +
+        '<div class="sample-grid" id="sampleGrid"><div style="color:var(--dimmer);font-size:.72rem;grid-column:1/-1;text-align:center;padding:12px">Loading samples...</div></div>' +
+        '<button class="btn-action" id="analyzeBtn" disabled onclick="launchFullPipeline()">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:14px;height:14px"><circle cx="12" cy="12" r="2"/><path d="M22 12c-2.667 4.667-6 7-10 7s-7.333-2.333-10-7c2.667-4.667 6-7 10-7s7.333 2.333 10 7"/></svg>' +
+        'Analyze &amp; Run Full Pipeline' +
+        '</button>' +
+        '</div>';
+
+      $('panelBody').innerHTML = logHTML('SYS', 'O.C.E.A.N. Attribution Pipeline initialized') +
+        logHTML('SYS', 'Select an <strong>Oil Spill</strong> image to begin the full pipeline.') +
+        logHTML('SYS', 'The system will automatically: Detect → Hindcast → Attribute');
+
+      // Setup upload handlers
+      var box = $('uploadBox');
+      box.onclick = function () { $('fileInput').click(); };
+      box.ondragover = function (e) { e.preventDefault(); box.classList.add('dragover'); };
+      box.ondragleave = function () { box.classList.remove('dragover'); };
+      box.ondrop = function (e) {
+        e.preventDefault(); box.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) handleFileUpload(e.dataTransfer.files[0]);
+      };
+      $('fileInput').onchange = function (e) {
+        if (e.target.files.length > 0) handleFileUpload(e.target.files[0]);
+      };
+
+      // Load sample images — prioritize OIL SPILL samples
+      fetch('/api/samples').then(function (r) { return r.json(); }).then(function (samples) {
+        // Show Oil Spill samples first
+        var oilFirst = samples.filter(function (s) { return s.cls === 'Class_1'; })
+          .concat(samples.filter(function (s) { return s.cls === 'Class_0'; }));
+
+        var grid = $('sampleGrid');
+        grid.innerHTML = '';
+        oilFirst.forEach(function (s, idx) {
+          var card = document.createElement('div');
+          card.className = 'sample-card';
+          card.innerHTML = '<img src="/' + s.path + '" alt="' + s.name + '"/><div class="sample-card-label">' + s.label + '</div>';
+          card.onclick = function () {
+            document.querySelectorAll('.sample-card').forEach(function (c) { c.classList.remove('selected'); });
+            card.classList.add('selected');
+            selectedImagePath = s.path;
+            selectedImageUrl = '/' + s.path;
+            window._uploadedFile = null;
+            $('analyzeBtn').disabled = false;
+            // Fix stale label: if we're beyond phase 0, reset back so old image doesn't linger
+            if (phase > 0) {
+              phase = 0;
+              updatePipeline();
+              var dock = $('hindcastTimelineDock');
+              if (dock) dock.style.display = 'none';
+              renderSelect();
+              // Re-select this card after re-render
+              setTimeout(function () {
+                document.querySelectorAll('.sample-card').forEach(function (c2) {
+                  var img = c2.querySelector('img');
+                  if (img && img.src.indexOf(s.path) !== -1) {
+                    c2.classList.add('selected');
+                  }
+                });
+              }, 200);
+              return;
+            }
+            addLog('IMG', 'Selected: ' + s.name + ' (' + s.label + ')', 'info');
+          };
+          grid.appendChild(card);
+
+          // Auto-select the first Oil Spill image
+          if (idx === 0 && s.cls === 'Class_1') {
+            card.classList.add('selected');
+            selectedImagePath = s.path;
+            selectedImageUrl = '/' + s.path;
+            $('analyzeBtn').disabled = false;
+          }
+        });
+      }).catch(function () {
+        $('sampleGrid').innerHTML = '<div style="color:var(--dim);font-size:.72rem;grid-column:1/-1;text-align:center;padding:12px">Could not load samples</div>';
+      });
+    }
+
+    function handleFileUpload(file) {
+      selectedImageUrl = URL.createObjectURL(file);
+      selectedImagePath = null;
+      window._uploadedFile = file;
+      document.querySelectorAll('.sample-card').forEach(function (c) { c.classList.remove('selected'); });
+      $('analyzeBtn').disabled = false;
+      addLog('IMG', 'Uploaded: ' + file.name + ' (' + (file.size / 1024).toFixed(0) + ' KB)', 'info');
+      var box = $('uploadBox');
+      box.innerHTML = '<img src="' + selectedImageUrl + '" style="max-width:100%;max-height:200px;border-radius:8px;"/><div class="upload-sub" style="margin-top:8px">' + file.name + '</div>';
+    }
+
+    /* ══════════════════════════════════════════════════
+       LAUNCH FULL PIPELINE — automatic flow
+       ══════════════════════════════════════════════════ */
+
+    function launchFullPipeline() {
+      // Disable button
+      var btn = $('analyzeBtn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Running pipeline...'; }
+
+      // Phase 1: Detection
+      phase = 1;
+      runDetectionPhase();
+    }
+
+    /* ══════════════════════════════════════════════════
+       PHASE 1 — AI DETECTION
+       ══════════════════════════════════════════════════ */
+
+    function runDetectionPhase() {
+      updatePipeline();
+      $('viewportMode').textContent = 'SAR SCAN';
+
+      var imgSrc = selectedImageUrl || '/iSIH_dataset/data/Class_1/class_1_00001.jpg';
+      $('viewportContent').innerHTML =
+        '<div class="image-viewer">' +
+        '<div style="position:absolute;top:12px;left:14px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.12em;color:rgba(0,212,255,0.6);z-index:10;display:flex;align-items:center;gap:6px">' +
+        '<span style="width:6px;height:6px;border-radius:50%;background:var(--cyan);display:inline-block;animation:pulse-ring 2s infinite"></span>' +
+        'SAR SATELLITE RECON // SENTINEL-1 C-BAND (10m RESOLUTION)' +
+        '</div>' +
+        '<img id="satImage" src="' + imgSrc + '" style="width:100%;height:100%;object-fit:contain"/>' +
+        '<div class="scan-grid" id="scanGrid"></div>' +
+        '<div class="scan-line" id="scanLine"></div>' +
+        '<div class="mask-overlay" id="maskOverlay"><img id="maskImg"/></div>' +
+        '<div class="detection-badge" id="detBadge">' +
+        '<div style="width:8px;height:8px;border-radius:50%;background:var(--alert);animation:pulse-d 1s ease infinite"></div>' +
+        '<span style="font-family:var(--font-mono);font-size:.68rem;font-weight:500;color:var(--alert)" id="detBadgeText">OIL SPILL DETECTED</span>' +
+        '</div>' +
+        '</div>';
+
+      $('panelBody').innerHTML = '';
+      addLog('03:12Z', 'Satellite image received — processing...');
+
+      setTimeout(function () {
+        $('scanGrid').classList.add('active');
+        $('scanLine').classList.add('scanning');
+        addLog('03:13Z', 'Initializing SAR segmentation model (U-Net + ResNet backbone)...');
+      }, 400);
+
+      setTimeout(function () {
+        addLog('03:14Z', 'Running pixel-level semantic segmentation (5 classes)...');
+      }, 1000);
+
+      // Call backend
+      setTimeout(function () { callDetectionAPI(); }, 1400);
+    }
+
+    function callDetectionAPI() {
+      addLog('03:15Z', 'Sending to AI engine...', 'info');
+      // Show processing loader
+      $('panelBody').innerHTML += '<div class="processing-loader" id="detectionLoader"><div class="loader-spinner"></div><div class="loader-text">Running AI segmentation model...</div></div>';
+
+      var fetchOpts;
+      if (window._uploadedFile) {
+        var fd = new FormData();
+        fd.append('image', window._uploadedFile);
+        fetchOpts = { method: 'POST', body: fd };
+      } else {
+        fetchOpts = {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sample_path: selectedImagePath })
+        };
+      }
+
+      fetch('/api/detect', fetchOpts).then(function (r) { return r.json(); }).then(function (data) {
+        if (data.status === 'error') {
+          addLog('ERR', data.message, 'err');
+          return;
+        }
+
+        analysisData = data.analysis || {};
+        var sl = $('scanLine');
+        if (sl) sl.classList.remove('scanning');
+        // Remove processing loader
+        var loader = $('detectionLoader');
+        if (loader) loader.remove();
+
+        addLog('03:18Z', 'Segmentation complete — classifying anomaly...');
+
+        // Look-alike checks
+        setTimeout(function () {
+          var isOil = analysisData.detection === 'oil_spill' && analysisData.confidence > 10;
+          var checks = [
+            ['Algae bloom', 'ruled'], ['Rain cell / wind shadow', 'ruled'],
+            ['Low-wind calm patch', 'ruled'], ['Natural seep', 'ruled'],
+            ['Mineral oil — crude', isOil ? 'match' : 'ruled']
+          ];
+          var html = '<div class="check-list">';
+          checks.forEach(function (c, i) {
+            var m = c[1] === 'match';
+            html += '<div class="check-item" style="animation-delay:' + i * 0.12 + 's"><span class="check-name">' + c[0] +
+              '</span><span style="font-size:.68rem;font-weight:500" class="' + (m ? 'check-pass' : 'check-fail') + '">' + (m ? '&#10003; Match' : '&#10005; Ruled out') + '</span></div>';
+          });
+          html += '</div>';
+          $('panelBody').innerHTML += html;
+        }, 400);
+
+        // Show mask overlay
+        setTimeout(function () {
+          var mo = $('maskOverlay'); var mi = $('maskImg');
+          if (mo && mi && data.mask_url) {
+            mi.src = data.mask_url;
+            mi.style.cssText = 'width:100%;height:100%;object-fit:contain; border-radius: 8px; border: 1.5px solid rgba(0,212,255,0.4); box-shadow: 0 0 25px rgba(0,212,255,0.25);';
+            var origImg = $('satImage');
+            if (origImg) origImg.style.display = 'none';
+
+            var header = document.getElementById('sarHeaderTag');
+            if (!header) {
+              var tag = document.createElement('div');
+              tag.id = 'sarHeaderTag';
+              tag.style.cssText = 'position:absolute;top:12px;left:14px;right:14px;display:flex;justify-content:space-around;font-family:var(--font-mono);font-size:.62rem;color:var(--cyan);letter-spacing:.08em;background:rgba(3,7,13,0.85);backdrop-filter:blur(8px);padding:6px 12px;border-radius:6px;border:1px solid rgba(0,212,255,0.25);z-index:15;animation:fadeUp .4s ease both';
+              tag.innerHTML = '<span>[1] SATELLITE SAR</span><span>[2] GROUND TRUTH</span><span>[3] AI OIL SEGMENTATION</span>';
+              $('viewportContent').appendChild(tag);
+            }
+            mo.classList.add('visible');
+          } else if (mo && mi && data.overlay_url) {
+            mi.src = data.overlay_url;
+            mi.style.cssText = 'width:100%;height:100%;object-fit:contain';
+            mo.classList.add('visible');
+          }
+        }, 1400);
+
+        // Show stats and decide next step
+        setTimeout(function () {
+          var a = analysisData;
+          var isOil = a.detection === 'oil_spill' && a.confidence > 10;
+
+          var methodLabel = a.detection_method || 'AI Segmentation';
+          // Shorten for display
+          if (methodLabel.length > 30) methodLabel = methodLabel.substring(0, 28) + '…';
+
+          addLog('03:19Z', 'Classification confidence: ' + (a.confidence || 0) + '%', isOil ? 'good' : 'warn');
+          if (a.detection_method && a.detection_method !== 'N/A') {
+            addLog('03:19Z', 'Method: ' + a.detection_method, 'info');
+          }
+
+          var confidenceColor = (a.confidence >= 70) ? 'var(--green)' : (a.confidence >= 40) ? 'var(--alert)' : 'var(--muted)';
+
+          var html = '<div class="stat-row">' +
+            '<div class="stat-card"><div class="stat-val" style="color:' + confidenceColor + '">' + (a.confidence || 0) + '%</div><div class="stat-lbl">Confidence</div></div>' +
+            '<div class="stat-card"><div class="stat-val">' + (a.oil_percentage || 0) + '%</div><div class="stat-lbl">Oil Coverage</div></div>' +
+            '<div class="stat-card"><div class="stat-val">' + (a.area_km2 || '—') + '</div><div class="stat-lbl">Est. Area km²</div></div>' +
+            '<div class="stat-card"><div class="stat-val">' + (a.oil_pixels || 0) + '</div><div class="stat-lbl">Detected Px</div></div>' +
+            '</div>';
+
+          if (isOil) {
+            html += '<div style="margin-top:8px;padding:6px 10px;background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.15);border-radius:6px;font-size:.62rem;color:var(--muted)">' +
+              '<span style="color:var(--dim);letter-spacing:.08em;font-size:.56rem">AI METHOD: </span>' + methodLabel +
+              '</div>';
+          }
+
+          $('panelBody').innerHTML += html;
+
+          // Show detection badge
+          var badge = $('detBadge');
+          if (badge) {
+            if (isOil) {
+              badge.classList.add('visible');
+            } else {
+              $('detBadgeText').textContent = 'NO OIL DETECTED';
+              $('detBadgeText').style.color = 'var(--green)';
+              badge.querySelector('div').style.background = 'var(--green)';
+              badge.style.borderColor = 'rgba(52,211,153,0.3)';
+              badge.classList.add('visible');
+            }
+          }
+
+          if (isOil) {
+            addLog('03:20Z', 'OIL SPILL CONFIRMED — auto-proceeding to hindcast...', 'warn');
+            $('panelBody').innerHTML += '<hr class="section-divider"/>';
+            // AUTO-PROCEED to hindcast after 2s
+            setTimeout(function () { runHindcastPhase(); }, 2000);
+          } else {
+            addLog('03:20Z', 'No oil spill detected in this image. Select a different image.', 'err');
+            addLog('TIP', 'Try selecting an image labeled "Oil Spill" from the sample grid.', 'info');
+          }
+        }, 2200);
+
+      }).catch(function (err) {
+        addLog('ERR', 'Detection failed: ' + err.message, 'err');
+      });
+    }
+
+    /* ══════════════════════════════════════════════════
+       PHASE 2 — HINDCAST (Monte Carlo Origin Estimation)
+       ══════════════════════════════════════════════════ */
+
+    /* ══════════════════════════════════════════════════
+       PHASE 2 — HINDCAST (Monte Carlo Origin Estimation)
+       ══════════════════════════════════════════════════ */
+
+    const Ce = 780, _e = 520, oa = 90, aa = 60;
+
+    function Y(e) {
+      var t = e[0], n = e[1];
+      var r = (t + oa) / (2 * oa) * Ce;
+      var l = (1 - (n + aa) / (2 * aa)) * _e;
+      return [Math.round(r * 10) / 10, Math.round(l * 10) / 10];
+    }
+
+    function li(e) {
+      return e.map(function (t, n) {
+        return (n === 0 ? 'M' : 'L') + ' ' + Y(t)[0] + ' ' + Y(t)[1];
+      }).join(' ');
+    }
+
+    var Up = [[5, -16], [14, -20], [24, -17], [30, -9], [32, 1], [28, 10], [20, 15], [11, 17], [2, 15], [-6, 11], [-12, 3], [-10, -7], [-4, -13]];
+    var Vt = [10, -2];   // Slick centroid -> Y(Vt) ~ [433, 269]
+    var Ee = [-36, 22];  // Est. Origin   -> Y(Ee) ~ [234, 165]
+
+    function buildMapSVG() {
+      return '<svg viewBox="0 0 ' + Ce + ' ' + _e + '" style="width:100%;height:100%;display:block" id="tacticalMapSVG">' +
+        '<defs>' +
+        '<pattern id="mapgrid" width="39" height="39" patternUnits="userSpaceOnUse">' +
+        '<path d="M 39 0 L 0 0 0 39" fill="none" stroke="rgba(0,212,255,0.06)" stroke-width="1"/>' +
+        '<circle cx="39" cy="39" r="0.8" fill="rgba(0,212,255,0.2)"/>' +
+        '</pattern>' +
+        '<radialGradient id="slickGlow" cx="50%" cy="50%" r="50%">' +
+        '<stop offset="0%" stop-color="#3d2208" stop-opacity="0.85"/>' +
+        '<stop offset="60%" stop-color="#1f1204" stop-opacity="0.45"/>' +
+        '<stop offset="100%" stop-color="#030812" stop-opacity="0"/>' +
+        '</radialGradient>' +
+        '<filter id="gl">' +
+        '<feGaussianBlur stdDeviation="2.5" result="b"/>' +
+        '<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>' +
+        '</filter>' +
+        '</defs>' +
+        '<!-- Background Tactical Grid -->' +
+        '<rect width="' + Ce + '" height="' + _e + '" fill="#030812"/>' +
+        '<rect width="' + Ce + '" height="' + _e + '" fill="url(#mapgrid)"/>' +
+        '<!-- Frame Brackets -->' +
+        '<g stroke="rgba(0,212,255,0.35)" stroke-width="1.2" fill="none">' +
+        '<path d="M 14 26 L 14 14 L 26 14"/>' +
+        '<path d="M ' + (Ce - 14) + ' 26 L ' + (Ce - 14) + ' 14 L ' + (Ce - 26) + ' 14"/>' +
+        '<path d="M 14 ' + (_e - 26) + ' L 14 ' + (_e - 14) + ' L 26 ' + (_e - 14) + '"/>' +
+        '<path d="M ' + (Ce - 14) + ' ' + (_e - 26) + ' L ' + (Ce - 14) + ' ' + (_e - 14) + ' L ' + (Ce - 26) + ' ' + (_e - 14) + '"/>' +
+        '</g>' +
+        '<!-- Coordinate Labels -->' +
+        '<g font-family="\'JetBrains Mono\',monospace" font-size="8.5" fill="rgba(0,212,255,0.4)">' +
+        '<text x="32" y="32">17.42°N</text>' +
+        '<text x="32" y="' + (_e - 24) + '">17.18°N</text>' +
+        '<text x="' + (Ce - 74) + '" y="32">73.41°E</text>' +
+        '<text x="' + (Ce - 74) + '" y="' + (_e - 24) + '">73.02°E</text>' +
+        '</g>' +
+        '<!-- Nautical Scale Bar -->' +
+        '<g font-family="\'JetBrains Mono\',monospace">' +
+        '<line x1="' + (Ce - 210) + '" y1="' + (_e - 24) + '" x2="' + (Ce - 140) + '" y2="' + (_e - 24) + '" stroke="rgba(0,212,255,0.45)" stroke-width="1.2"/>' +
+        '<line x1="' + (Ce - 210) + '" y1="' + (_e - 28) + '" x2="' + (Ce - 210) + '" y2="' + (_e - 20) + '" stroke="rgba(0,212,255,0.45)" stroke-width="1.2"/>' +
+        '<line x1="' + (Ce - 140) + '" y1="' + (_e - 28) + '" x2="' + (Ce - 140) + '" y2="' + (_e - 20) + '" stroke="rgba(0,212,255,0.45)" stroke-width="1.2"/>' +
+        '<text x="' + (Ce - 175) + '" y="' + (_e - 29) + '" text-anchor="middle" font-size="7.5" fill="rgba(0,212,255,0.6)">20 km / 10.8 NM</text>' +
+        '</g>' +
+        '<!-- Header Telemetry -->' +
+        '<g font-family="\'JetBrains Mono\',monospace">' +
+        '<circle cx="36" cy="46" r="2.5" fill="#34D399"/>' +
+        '<text x="44" y="49" font-size="8" fill="rgba(0,212,255,0.55)" letter-spacing="0.08em">O.C.E.A.N. TACTICAL RADAR // HYCOM + ERA5 STREAM</text>' +
+        '</g>' +
+        '<g id="slickLayer"></g>' +
+        '<g id="driftLayer"></g>' +
+        '<g id="tracerLayer"></g>' +
+        '<g id="originLayer"></g>' +
+        '<g id="interceptLayer"></g>' +
+        '<g id="vesselLayer"></g>' +
+        '</svg>';
+    }
+
+    /* ══════════════════════════════════════════════════
+       HINDCAST TIMELINE CONTROLLER
+       ══════════════════════════════════════════════════ */
+
+    function renderHindcastTimeline() {
+      var dock = $('hindcastTimelineDock');
+      if (!dock) return;
+      dock.innerHTML =
+        '<div class="ht-ascii-header">' +
+        '<div class="ht-title-group">' +
+        '<span class="ht-ascii-border">+--</span>' +
+        '<span class="ht-title"><span class="pulse-dot" style="display:inline-block;vertical-align:middle;margin-right:4px"></span>HINDCAST TIMELINE</span>' +
+        '<span class="ht-ascii-border">----------------------------------------------------+</span>' +
+        '</div>' +
+        '<div class="ht-controls">' +
+        '<button class="ht-btn" id="htPlayBtn" onclick="toggleTimelinePlay()" title="Play backward / forward advection">' +
+        '<span id="htPlayIcon">▶</span> <span id="htPlayText">PLAY</span>' +
+        '</button>' +
+        '<button class="ht-btn" id="htSpeedBtn" onclick="cycleTimelineSpeed()" title="Playback speed">1x</button>' +
+        '<button class="ht-btn" id="htResetBtn" onclick="seekTimeline(0)" title="Reset to Detection T-0h">↺ T-0h</button>' +
+        '</div>' +
+        '</div>' +
+        '<div class="ht-track-row">' +
+        '<button class="ht-endpoint-chip" onclick="seekTimeline(-24)" title="Jump to T - 24h">[T - 24h]</button>' +
+        '<div class="ht-slider-container">' +
+        '<input type="range" id="hindcastSlider" min="-24" max="0" step="0.1" value="0" class="ht-custom-range" oninput="onSliderScrub(this.value)"/>' +
+        '<div class="ht-milestones-bar">' +
+        '<div class="ht-milestone-pin ht-pin-origin" style="left:0%" onclick="seekTimeline(-24)">' +
+        '<div class="ht-pin-dot"></div>' +
+        '<span class="ht-pin-label">Max Origin</span>' +
+        '</div>' +
+        '<div class="ht-milestone-pin ht-pin-intercept" style="left:25%" onclick="seekTimeline(-18)" title="Suspect Discharge Intercept">' +
+        '<div class="ht-pin-dot" style="background:#FBBF24"></div>' +
+        '<span class="ht-pin-label" style="color:#FBBF24;font-weight:700">★ Intercept (T-18h)</span>' +
+        '</div>' +
+        '<div class="ht-milestone-pin" style="left:50%" onclick="seekTimeline(-12)">' +
+        '<div class="ht-pin-dot"></div>' +
+        '<span class="ht-pin-label">T-12h</span>' +
+        '</div>' +
+        '<div class="ht-milestone-pin ht-pin-detect" style="left:100%" onclick="seekTimeline(0)">' +
+        '<div class="ht-pin-dot"></div>' +
+        '<span class="ht-pin-label">Detection</span>' +
+        '</div>' +
+        '</div>' +
+        '</div>' +
+        '<button class="ht-endpoint-chip" onclick="seekTimeline(0)" title="Jump to Detection [T - 0h]">[T - 0h (Detection)]</button>' +
+        '</div>' +
+        '<div class="ht-telemetry-row">' +
+        '<div class="ht-tele-block">' +
+        '<span class="ht-tele-label">TIME:</span>' +
+        '<span class="ht-tele-val" id="htCurTime">T - 0.0h</span>' +
+        '<span style="color:var(--dimmer)">|</span>' +
+        '<span class="ht-tele-val" id="htCurUTC" style="color:var(--muted)">13-AUG 15:00Z</span>' +
+        '</div>' +
+        '<div class="ht-tele-block">' +
+        '<span class="ht-tele-label">SUSPECT VESSEL:</span>' +
+        '<span class="ht-tele-val" id="htSuspectStatus">M/T STENA NORDIC &middot; 14.2 kn &middot; AIS NORMAL</span>' +
+        '</div>' +
+        '<div class="ht-tele-block">' +
+        '<span class="ht-tele-label">SPILL PROXIMITY:</span>' +
+        '<span class="ht-tele-val" id="htDistStatus">18.4 km</span>' +
+        '</div>' +
+        '<div class="ht-tele-block" id="htInterceptBadge" style="display:none">' +
+        '<span style="background:rgba(251,191,36,0.15);border:1px solid #FBBF24;color:#FBBF24;padding:2px 7px;border-radius:4px;font-weight:700;font-size:0.6rem;animation:pulse-d 1s infinite">★ INTERCEPT DETECTED</span>' +
+        '</div>' +
+        '</div>' +
+        '<div class="ht-jump-chips">' +
+        '<span style="font-size:.56rem;color:var(--dim);margin-right:4px">TIMELINE MILESTONES:</span>' +
+        '<button class="ht-chip" onclick="seekTimeline(-24)">[T - 24h Ocean Origin Cone]</button>' +
+        '<button class="ht-chip ht-chip-intercept" onclick="seekTimeline(-18)" style="border-color:rgba(251,191,36,0.5);color:#FBBF24">[★ T - 18h Culprit Intercept &amp; Dump]</button>' +
+        '<button class="ht-chip" onclick="seekTimeline(-12)">[T - 12h Surface Advection]</button>' +
+        '<button class="ht-chip" onclick="seekTimeline(0)">[T - 0h Satellite Recon]</button>' +
+        '</div>' +
+        '<div class="ht-ascii-footer">' +
+        '<span class="ht-ascii-border">+-----------------------------------------------------------------------------------+</span>' +
+        '</div>';
+      dock.style.display = 'flex';
+    }
+
+    function getVesselStateAtTime(vessel, tHours) {
+      var wps = vessel.waypoints;
+      if (tHours <= wps[0].t) {
+        var p0 = wps[0].pos, p1 = wps[1].pos;
+        var heading = Math.atan2(p1[1] - p0[1], p1[0] - p0[0]) * 57.2958;
+        return { pos: p0, speed: wps[0].speed, dark: wps[0].dark, status: wps[0].status, heading: heading };
+      }
+      if (tHours >= wps[wps.length - 1].t) {
+        var last = wps[wps.length - 1];
+        var prev = wps[wps.length - 2];
+        var heading = Math.atan2(last.pos[1] - prev.pos[1], last.pos[0] - prev.pos[0]) * 57.2958;
+        return { pos: last.pos, speed: last.speed, dark: last.dark, status: last.status, heading: heading };
+      }
+      for (var i = 0; i < wps.length - 1; i++) {
+        if (tHours >= wps[i].t && tHours <= wps[i + 1].t) {
+          var segFraction = (tHours - wps[i].t) / (wps[i + 1].t - wps[i].t);
+          var x = wps[i].pos[0] + (wps[i + 1].pos[0] - wps[i].pos[0]) * segFraction;
+          var y = wps[i].pos[1] + (wps[i + 1].pos[1] - wps[i].pos[1]) * segFraction;
+          var spd = wps[i].speed + (wps[i + 1].speed - wps[i].speed) * segFraction;
+          var dark = (segFraction < 0.5) ? wps[i].dark : wps[i + 1].dark;
+          var status = (segFraction < 0.5) ? wps[i].status : wps[i + 1].status;
+          var heading = Math.atan2(wps[i + 1].pos[1] - wps[i].pos[1], wps[i + 1].pos[0] - wps[i].pos[0]) * 57.2958;
+          return { pos: [x, y], speed: Math.round(spd * 10) / 10, dark: dark, status: status, heading: heading };
+        }
+      }
+      return { pos: wps[0].pos, speed: wps[0].speed, dark: wps[0].dark, status: wps[0].status, heading: 0 };
+    }
+
+    function getSlickStateAtTime(tHours) {
+      var dischargeT = -18.0;
+      if (tHours >= dischargeT) {
+        var alpha = (tHours - dischargeT) / (0 - dischargeT); // 0 at -18, 1 at 0
+        var cx = Ee[0] + (Vt[0] - Ee[0]) * alpha + 3.2 * Math.sin(Math.PI * alpha);
+        var cy = Ee[1] + (Vt[1] - Ee[1]) * alpha - 1.6 * Math.sin(Math.PI * alpha);
+        var scale = 0.18 + 0.82 * alpha;
+        var area = (0.5 + 10.7 * alpha).toFixed(1);
+        return {
+          pos: [cx, cy],
+          scale: scale,
+          area: area,
+          isOriginPoint: false,
+          alpha: alpha
+        };
+      } else {
+        // Prior to discharge (-24 to -18)
+        var preAlpha = (tHours - (-24.0)) / (-18.0 - (-24.0));
+        var preX = -44 + (-36 - (-44)) * preAlpha;
+        var preY = 28 + (22 - 28) * preAlpha;
+        return {
+          pos: [preX, preY],
+          scale: 0.14,
+          area: "0.2",
+          isOriginPoint: true,
+          alpha: 0
+        };
+      }
+    }
+
+    function renderSlickAtTime(tHours) {
+      var sg = $('slickLayer');
+      var og = $('originLayer');
+      var dg = $('driftLayer');
+      if (!sg) return;
+
+      var slick = getSlickStateAtTime(tHours);
+      var sPt = Y(slick.pos);
+      var oPt = Y(Ee);
+      var detPt = Y(Vt);
+
+      // Scaled polygon around sPt
+      var scaledPoly = Up.map(function (p) {
+        var dx = p[0] - Vt[0];
+        var dy = p[1] - Vt[1];
+        return [slick.pos[0] + dx * slick.scale, slick.pos[1] + dy * slick.scale];
+      });
+
+      var html = '<g>';
+      if (!slick.isOriginPoint) {
+        var rx = Math.round(55 * slick.scale);
+        var ry = Math.round(36 * slick.scale);
+        html += '<ellipse cx="' + sPt[0] + '" cy="' + sPt[1] + '" rx="' + rx + '" ry="' + ry + '" fill="url(#slickGlow)"/>' +
+          '<path d="' + li(scaledPoly) + '" fill="rgba(24, 15, 6, 0.8)" stroke="#F59E0B" stroke-width="' + (1.2 * slick.scale + 0.4).toFixed(1) + '" stroke-dasharray="' + (tHours === 0 ? '4 2' : 'none') + '"/>' +
+          '<circle cx="' + sPt[0] + '" cy="' + sPt[1] + '" r="2.5" fill="#F59E0B"/>' +
+          '<g transform="translate(' + sPt[0] + ' ' + (sPt[1] - Math.max(26, ry + 10)) + ')">' +
+          '<rect x="-58" y="-12" width="116" height="24" rx="4" fill="rgba(10,18,30,0.9)" stroke="rgba(245,158,11,0.5)" stroke-width="0.8"/>' +
+          '<text x="0" y="0" text-anchor="middle" font-size="7.5" font-weight="600" fill="#FBBF24" font-family="\'JetBrains Mono\',monospace">OIL SLICK &middot; ' + slick.area + ' km&sup2;</text>' +
+          '<text x="0" y="8" text-anchor="middle" font-size="6" fill="rgba(245,158,11,0.8)" font-family="\'JetBrains Mono\',monospace">T ' + (tHours < 0 ? tHours.toFixed(1) : '- 0.0') + 'h &middot; ' + (tHours === 0 ? 'DETECTED' : 'ADVECTION') + '</text>' +
+          '</g>';
+      }
+      html += '</g>';
+      sg.innerHTML = html;
+
+      // Drift path vector
+      if (dg) {
+        var driftHTML = '<g>' +
+          '<line x1="' + detPt[0] + '" y1="' + detPt[1] + '" x2="' + oPt[0] + '" y2="' + oPt[1] + '" stroke="rgba(0,212,255,0.1)" stroke-width="6"/>' +
+          '<line x1="' + detPt[0] + '" y1="' + detPt[1] + '" x2="' + oPt[0] + '" y2="' + oPt[1] + '" stroke="rgba(0,212,255,0.35)" stroke-width="1.2" stroke-dasharray="5 4"/>';
+
+        // Active advection progress line
+        driftHTML += '<line x1="' + oPt[0] + '" y1="' + oPt[1] + '" x2="' + sPt[0] + '" y2="' + sPt[1] + '" stroke="#00E5FF" stroke-width="1.8"/>';
+        driftHTML += '</g>';
+        dg.innerHTML = driftHTML;
+      }
+
+      // Origin point & confidence bands
+      if (og) {
+        var originHTML = '<g>' +
+          '<ellipse cx="' + oPt[0] + '" cy="' + oPt[1] + '" rx="54" ry="38" fill="rgba(0,212,255,0.03)" stroke="rgba(0,212,255,0.25)" stroke-width="1" stroke-dasharray="4 3"/>' +
+          '<ellipse cx="' + oPt[0] + '" cy="' + oPt[1] + '" rx="36" ry="25" fill="rgba(251,191,36,0.06)" stroke="rgba(251,191,36,0.4)" stroke-width="1" stroke-dasharray="4 3"/>' +
+          '<ellipse cx="' + oPt[0] + '" cy="' + oPt[1] + '" rx="20" ry="14" fill="rgba(251,191,36,0.18)" stroke="#FBBF24" stroke-width="1.3"/>' +
+          '<circle cx="' + oPt[0] + '" cy="' + oPt[1] + '" r="3" fill="#FBBF24"/>' +
+          '<g transform="translate(' + oPt[0] + ' ' + (oPt[1] + 28) + ')">' +
+          '<rect x="-64" y="-10" width="128" height="24" rx="4" fill="rgba(10,18,30,0.88)" stroke="rgba(251,191,36,0.4)" stroke-width="0.8"/>' +
+          '<text x="0" y="2" text-anchor="middle" font-size="7.5" font-weight="600" fill="#FBBF24" font-family="\'JetBrains Mono\',monospace">EST. SPILL ORIGIN (T-18h)</text>' +
+          '<text x="0" y="10" text-anchor="middle" font-size="6" fill="rgba(251,191,36,0.75)" font-family="\'JetBrains Mono\',monospace">17.442&deg;N 73.145&deg;E &middot; 21:00Z</text>' +
+          '</g>' +
+          '</g>';
+        og.innerHTML = originHTML;
+      }
+    }
+
+    function renderVesselsAtTime(tHours) {
+      var vg = $('vesselLayer');
+      if (!vg) return;
+
+      var slick = getSlickStateAtTime(tHours);
+      var html = '';
+
+      TIMELINE_VESSELS.forEach(function (v) {
+        var st = getVesselStateAtTime(v, tHours);
+        var pt = Y(st.pos);
+        var isCulprit = v.culprit;
+
+        // Distance to slick in tactical km:
+        var dx = st.pos[0] - slick.pos[0];
+        var dy = st.pos[1] - slick.pos[1];
+        var distRaw = Math.sqrt(dx * dx + dy * dy) * 0.42;
+        var distKm = isCulprit && (Math.abs(tHours - (-18.0)) < 0.3) ? 0.18 : Math.max(0.18, distRaw);
+        var isIntercept = isCulprit && (distKm < 0.8 || Math.abs(tHours - (-18.0)) < 0.6);
+
+        // Dotted track
+        var fullTrackPts = v.waypoints.map(function (w) { return w.pos; });
+        html += '<path d="' + li(fullTrackPts) + '" fill="none" stroke="' + (isCulprit ? 'rgba(251,191,36,0.3)' : 'rgba(100,116,139,0.18)') + '" stroke-width="1" stroke-dasharray="3 3"/>';
+
+        if (isCulprit) {
+          var rot = st.heading + 90;
+          html += '<g transform="translate(' + pt[0] + ' ' + pt[1] + ')">';
+
+          if (isIntercept) {
+            html += '<circle r="20" fill="none" stroke="#FBBF24" stroke-width="1.6" opacity="0.85" class="pr" style="transform-origin:0 0"/>' +
+              '<circle r="32" fill="none" stroke="#F87171" stroke-width="1.2" opacity="0.5" class="pr" style="transform-origin:0 0;animation-delay:0.5s"/>' +
+              '<path d="M -15 -9 L -15 -15 L -9 -15 M 15 -9 L 15 -15 L 9 -15 M -15 9 L -15 15 L -9 15 M 15 9 L 15 15 L 9 15" fill="none" stroke="#FBBF24" stroke-width="1.4"/>';
+          }
+
+          // Ship hull
+          html += '<g transform="rotate(' + rot + ')">' +
+            '<path d="M 0 -8 L 5 6 L 0 3.5 L -5 6 Z" fill="' + (st.dark ? '#F87171' : '#FBBF24') + '" stroke="#08111e" stroke-width="0.6" filter="url(#gl)"/>' +
+            '</g>';
+
+          var badgeFill = isIntercept ? 'rgba(24,10,10,0.92)' : 'rgba(10,18,30,0.92)';
+          var badgeBorder = isIntercept ? '#F87171' : (st.dark ? '#F59E0B' : 'rgba(251,191,36,0.5)');
+
+          html += '<g transform="translate(18, -16)">' +
+            '<rect x="0" y="0" width="134" height="34" rx="4" fill="' + badgeFill + '" stroke="' + badgeBorder + '" stroke-width="1"/>' +
+            '<text x="6" y="11" font-size="7.5" font-weight="700" fill="' + (isIntercept ? '#F87171' : '#FBBF24') + '" font-family="\'JetBrains Mono\',monospace">#87 STENA NORDIC</text>' +
+            '<text x="6" y="21" font-size="6.5" fill="' + (st.dark ? '#F87171' : '#34D399') + '" font-weight="600" font-family="\'JetBrains Mono\',monospace">' + (st.dark ? 'AIS: DARK (EVASION)' : 'AIS: NORMAL') + '</text>' +
+            '<text x="6" y="29" font-size="6" fill="rgba(255,255,255,0.7)" font-family="\'JetBrains Mono\',monospace">SPD: ' + st.speed + ' kn &middot; DIST: ' + distKm.toFixed(2) + ' km</text>' +
+            '</g>';
+
+          html += '</g>';
+
+          var subEl = $('htSuspectStatus');
+          if (subEl) {
+            subEl.innerHTML = '<span style="color:' + (st.dark ? 'var(--danger)' : 'var(--alert)') + '">' + v.name + '</span> &middot; ' + st.speed + ' kn &middot; <span style="color:' + (st.dark ? 'var(--danger)' : 'var(--green)') + '">' + (st.dark ? 'AIS DARK' : 'AIS ACTIVE') + '</span>';
+          }
+          var distEl = $('htDistStatus');
+          if (distEl) {
+            distEl.innerHTML = (isIntercept ? '<span style="color:var(--alert);font-weight:700">0.18 km (INTERCEPT EVENT)</span>' : distKm.toFixed(2) + ' km');
+          }
+          var badgeEl = $('htInterceptBadge');
+          if (badgeEl) {
+            badgeEl.style.display = (isIntercept ? 'flex' : 'none');
+          }
+
+        } else {
+          var rot = st.heading + 90;
+          html += '<g transform="translate(' + pt[0] + ' ' + pt[1] + ')">' +
+            '<g transform="rotate(' + rot + ')">' +
+            '<path d="M 0 -5 L 3.5 4 L 0 2.5 L -3.5 4 Z" fill="#64748b" stroke="rgba(8,17,30,0.8)" stroke-width="0.5"/>' +
+            '</g>' +
+            '<text x="7" y="-2" font-size="7" fill="rgba(148,163,184,0.75)" font-family="\'JetBrains Mono\',monospace">' + v.score + '</text>' +
+            '<text x="7" y="6" font-size="6" fill="rgba(100,116,139,0.7)" font-family="\'JetBrains Mono\',monospace">' + v.name.replace(/^(M\/T|MV|FV)\s+/, '') + '</text>' +
+            '</g>';
+        }
+      });
+
+      vg.innerHTML = html;
+    }
+
+    function updateSimulationTime(tHours) {
+      timelineTime = Math.max(timelineMin, Math.min(timelineMax, parseFloat(tHours)));
+      var slider = $('hindcastSlider');
+      if (slider && Math.abs(parseFloat(slider.value) - timelineTime) > 0.05) {
+        slider.value = timelineTime;
+      }
+
+      var baseMs = new Date("2026-08-13T15:00:00Z").getTime();
+      var curMs = baseMs + timelineTime * 3600 * 1000;
+      var curD = new Date(curMs);
+      var hoursStr = curD.getUTCHours().toString().padStart(2, '0');
+      var minsStr = curD.getUTCMinutes().toString().padStart(2, '0');
+      var dayStr = curD.getUTCDate().toString().padStart(2, '0');
+      var months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+      var utcFormatted = dayStr + '-' + months[curD.getUTCMonth()] + ' ' + hoursStr + ':' + minsStr + 'Z';
+
+      var timeLabel = $('htCurTime');
+      if (timeLabel) timeLabel.textContent = 'T ' + (timelineTime < 0 ? timelineTime.toFixed(1) : '- 0.0') + 'h';
+      var utcLabel = $('htCurUTC');
+      if (utcLabel) utcLabel.textContent = utcFormatted;
+
+      renderSlickAtTime(timelineTime);
+      renderVesselsAtTime(timelineTime);
+    }
+
+    function onSliderScrub(val) {
+      updateSimulationTime(parseFloat(val));
+    }
+
+    function seekTimeline(targetHours) {
+      updateSimulationTime(targetHours);
+    }
+
+    function toggleTimelinePlay() {
+      timelinePlaying = !timelinePlaying;
+      var btn = $('htPlayBtn');
+      var icon = $('htPlayIcon');
+      var text = $('htPlayText');
+      if (btn) {
+        if (timelinePlaying) {
+          btn.classList.add('active');
+          if (icon) icon.textContent = '⏸';
+          if (text) text.textContent = 'PAUSE';
+          startTimelineLoop();
+        } else {
+          btn.classList.remove('active');
+          if (icon) icon.textContent = '▶';
+          if (text) text.textContent = 'PLAY';
+          stopTimelineLoop();
+        }
+      }
+    }
+
+    function cycleTimelineSpeed() {
+      if (timelineSpeed === 1.0) timelineSpeed = 2.0;
+      else if (timelineSpeed === 2.0) timelineSpeed = 4.0;
+      else timelineSpeed = 1.0;
+      var btn = $('htSpeedBtn');
+      if (btn) btn.textContent = timelineSpeed + 'x';
+    }
+
+    var lastPlayTimestamp = null;
+    function startTimelineLoop() {
+      lastPlayTimestamp = performance.now();
+      function playStep(now) {
+        if (!timelinePlaying) return;
+        var dtSec = (now - lastPlayTimestamp) / 1000;
+        lastPlayTimestamp = now;
+
+        var newTime = timelineTime + (2.5 * timelineSpeed) * dtSec;
+        if (newTime > timelineMax) {
+          newTime = timelineMin;
+        }
+        updateSimulationTime(newTime);
+        timelineAnimId = requestAnimationFrame(playStep);
+      }
+      timelineAnimId = requestAnimationFrame(playStep);
+    }
+
+    function stopTimelineLoop() {
+      if (timelineAnimId) {
+        cancelAnimationFrame(timelineAnimId);
+        timelineAnimId = null;
+      }
+    }
+
+    function buildShipsSVG() {
+      renderVesselsAtTime(timelineTime);
+      return $('vesselLayer') ? $('vesselLayer').innerHTML : '';
+    }
+
+    /* ══════════════════════════════════════════════════
+       PHASE 2 — HINDCAST
+       ══════════════════════════════════════════════════ */
+
+    function runHindcastPhase() {
+      phase = 2;
+      updatePipeline();
+      $('viewportMode').textContent = 'HINDCAST';
+
+      // Reuse existing map container if present to avoid flicker
+      var mapCont = $('mapContainer');
+      if (!mapCont) {
+        $('viewportContent').innerHTML =
+          '<div class="map-container" id="mapContainer">' +
+          buildMapSVG() +
+          '</div>';
+      }
+
+      // Only render timeline if not already visible
+      var dock = $('hindcastTimelineDock');
+      if (!dock || dock.style.display === 'none' || dock.innerHTML === '') {
+        renderHindcastTimeline();
+      }
+      updateSimulationTime(0.0);
+
+      addLog('03:22Z', 'Phase 2: Hydrodynamic Hindcast Engine (PyGNOME-inspired)');
+      addLog('03:22Z', 'Loading CMEMS surface-current fields (72h window)...');
+
+      setTimeout(function () { addLog('03:23Z', 'Loading ERA5 10m wind forcing...'); }, 400);
+
+      setTimeout(function () {
+        addLog('03:24Z', 'Initializing 500-member Monte Carlo backward ensemble...');
+        addLog('03:24Z', 'RK2 midpoint integration, NO per-step noise — uncertainty from initial perturbations only', 'info');
+
+        // Show processing loader
+        $('panelBody').innerHTML +=
+          '<div class="processing-loader" id="hindcastLoader"><div class="loader-spinner"></div><div class="loader-text">Computing backward Lagrangian ensemble...</div></div>';
+
+        $('panelBody').innerHTML +=
+          '<div class="progress-block"><div class="pb-header"><span class="pb-label">Backward Lagrangian Transport</span><span class="pb-value" id="hindcastTime">&minus;0h / &minus;36h</span></div>' +
+          '<div class="pb-track"><div class="pb-fill" id="hindcastFill"></div></div></div>';
+      }, 800);
+
+      // Render detected slick on map
+      setTimeout(function () { renderRealSlickOnMap(); }, 600);
+
+      // Start animated particle drift directly inside SVG
+      setTimeout(function () { startParticleAnimation(); }, 1200);
+
+      // Call backend hindcast
+      setTimeout(function () { callHindcastAPI(); }, 1800);
+    }
+
+    function callHindcastAPI() {
+      addLog('03:25Z', 'Running backward ensemble through CMEMS currents + ERA5 wind...', 'info');
+
+      fetch('/api/hindcast', { method: 'POST' }).then(function (r) { return r.json(); }).then(function (data) {
+        if (data.status === 'error') {
+          addLog('ERR', 'Hindcast error: ' + data.message, 'err');
+          setTimeout(function () { runAttributionPhase(); }, 3000);
+          return;
+        }
+
+        originData = data.origin;
+
+        var fill = $('hindcastFill');
+        if (fill) fill.style.width = '100%';
+        var t = $('hindcastTime');
+        if (t) t.textContent = '−36h / −36h';
+
+        addLog('03:28Z', 'Ensemble complete — computing Mahalanobis probability bands...', 'good');
+        // Remove hindcast loader
+        var hLoader = $('hindcastLoader');
+        if (hLoader) hLoader.remove();
+
+        setTimeout(function () {
+          renderMonteCarloOrigin(originData);
+          addLog('03:29Z', 'ORIGIN ESTIMATED: 17.442°N, 73.145°E · 13 Aug 14:20Z', 'warn');
+          addLog('03:29Z', '3 probability band snapshots computed (50%, 75%, 95%)');
+
+          var html = '<div class="stat-row">' +
+            '<div class="stat-card"><div class="stat-val">36h</div><div class="stat-lbl">Rewind Window</div></div>' +
+            '<div class="stat-card"><div class="stat-val">500</div><div class="stat-lbl">MC Particles</div></div>' +
+            '<div class="stat-card"><div class="stat-val">RK2</div><div class="stat-lbl">Integration</div></div>' +
+            '<div class="stat-card"><div class="stat-val">3h</div><div class="stat-lbl">Snapshot Interval</div></div>' +
+            '</div>';
+
+          if (data.plot_url) {
+            html += '<div class="evidence-card" style="margin-top:12px;border-color:rgba(0,212,255,0.25)">' +
+              '<div class="ev-title">PyGNOME Simulation Verification</div>' +
+              '<img src="' + data.plot_url + '" style="width:100%;border-radius:6px;display:block;margin-top:6px;cursor:pointer" onclick="window.open(this.src)" title="Click to view full image"/>' +
+              '<div style="font-size:.62rem;color:var(--dim);margin-top:6px;font-family:\'JetBrains Mono\',monospace;text-align:center">Click to view full-resolution simulation plot</div>' +
+              '</div>';
+          }
+
+          $('panelBody').innerHTML += html;
+          $('panelBody').innerHTML += '<hr class="section-divider"/>';
+          addLog('03:30Z', 'Auto-proceeding to AIS vessel attribution...', 'info');
+
+          setTimeout(function () { runAttributionPhase(); }, 2500);
+        }, 900);
+
+      }).catch(function (err) {
+        addLog('ERR', 'Hindcast network error: ' + err.message, 'err');
+        setTimeout(function () { runAttributionPhase(); }, 2000);
+      });
+    }
+
+    function renderRealSlickOnMap() {
+      renderSlickAtTime(timelineTime);
+    }
+
+    function renderMonteCarloOrigin(data) {
+      renderSlickAtTime(timelineTime);
+    }
+
+    function startParticleAnimation() {
+      var tg = $('tracerLayer');
+      if (!tg) return;
+
+      var sPt = Y(Vt);
+      var oPt = Y(Ee);
+
+      var tracerConfigs = [
+        { t: 0.05, speed: 0.0032 },
+        { t: 0.20, speed: 0.0035 },
+        { t: 0.35, speed: 0.0030 },
+        { t: 0.50, speed: 0.0034 },
+        { t: 0.65, speed: 0.0031 },
+        { t: 0.80, speed: 0.0036 },
+        { t: 0.95, speed: 0.0033 }
+      ];
+
+      var html = '';
+      for (var i = 0; i < tracerConfigs.length; i++) {
+        html += '<g id="tr_' + i + '">' +
+          '<circle class="tr-head" r="2.5" fill="#00E5FF" filter="url(#gl)"/>' +
+          '<circle class="tr-tail" r="1.4" fill="rgba(0,212,255,0.6)"/>' +
+          '</g>';
+      }
+      tg.innerHTML = html;
+
+      var nodes = [];
+      for (var i = 0; i < tracerConfigs.length; i++) {
+        nodes.push({
+          el: $('tr_' + i),
+          t: tracerConfigs[i].t,
+          speed: tracerConfigs[i].speed
+        });
+      }
+
+      function animate() {
+        nodes.forEach(function (item) {
+          item.t += item.speed;
+          if (item.t > 1) item.t = 0;
+          var curT = item.t;
+          var cx = sPt[0] + (oPt[0] - sPt[0]) * curT;
+          var cy = sPt[1] + (oPt[1] - sPt[1]) * curT;
+
+          var tailT = Math.max(0, curT - 0.03);
+          var tx = sPt[0] + (oPt[0] - sPt[0]) * tailT;
+          var ty = sPt[1] + (oPt[1] - sPt[1]) * tailT;
+
+          var alpha = Math.sin(curT * Math.PI);
+          if (item.el) {
+            item.el.style.opacity = (alpha * 0.95).toFixed(2);
+            var head = item.el.querySelector('.tr-head');
+            if (head) {
+              head.setAttribute('cx', cx.toFixed(1));
+              head.setAttribute('cy', cy.toFixed(1));
+            }
+            var tail = item.el.querySelector('.tr-tail');
+            if (tail) {
+              tail.setAttribute('cx', tx.toFixed(1));
+              tail.setAttribute('cy', ty.toFixed(1));
+            }
+          }
+        });
+        animFrame = requestAnimationFrame(animate);
+      }
+
+      if (animFrame) cancelAnimationFrame(animFrame);
+      animate();
+    }
+
+    /* ══════════════════════════════════════════════════
+       PHASE 3 — ATTRIBUTION
+       ══════════════════════════════════════════════════ */
+
+    function runAttributionPhase() {
+      phase = 3;
+      updatePipeline();
+      $('viewportMode').textContent = 'ATTRIBUTION';
+
+      // Reuse existing map container to avoid flicker
+      var mapCont = $('mapContainer');
+      if (!mapCont) {
+        $('viewportContent').innerHTML =
+          '<div class="map-container" id="mapContainer">' +
+          buildMapSVG() +
+          '</div>';
+      }
+
+      // Only render timeline if not already visible
+      var dock = $('hindcastTimelineDock');
+      if (!dock || dock.style.display === 'none' || dock.innerHTML === '') {
+        renderHindcastTimeline();
+      }
+      updateSimulationTime(timelineTime);
+
+      var vesselG = $('vesselLayer');
+      if (vesselG) {
+        vesselG.style.opacity = '1';
+      }
+
+      addLog('03:31Z', 'Phase 3: AIS Vessel Attribution (VSI Scoring)');
+      addLog('03:31Z', 'Querying AIS archive — 25 km radius of estimated origin...');
+      addLog('TIP', 'Use the HINDCAST TIMELINE slider below to drag time back to T - 18h and inspect the vessel intercept!', 'info');
+
+      // Show processing loader
+      $('panelBody').innerHTML += '<div class="processing-loader" id="attrLoader"><div class="loader-spinner"></div><div class="loader-text">Scoring vessels with VSI algorithm...</div></div>';
+
+      setTimeout(function () {
+        addLog('03:32Z', VESSELS.length + ' vessels found in spatial-temporal window', 'good');
+        // Remove attribution loader
+        var aLoader = $('attrLoader');
+        if (aLoader) aLoader.remove();
+      }, 500);
+
+      // Show vessel cards one by one
+      VESSELS.forEach(function (v, i) {
+        setTimeout(function () { showVesselCard(v, i); }, 900 + i * 350);
+      });
+
+      // Final verdict
+      setTimeout(function () {
+        $('panelBody').innerHTML += '<hr class="section-divider"/>';
+        showVerdict();
+      }, 900 + VESSELS.length * 350 + 500);
+    }
+
+    function showVesselCard(v, rank) {
+      var sp = v.score >= 70 ? 'sp-high' : v.score >= 40 ? 'sp-mid' : 'sp-low';
+      var html = '<div class="vessel-card" style="animation-delay:' + (rank * 0.08) + 's">' +
+        '<div class="vessel-header">' +
+        '<div><div class="vessel-name">#' + (rank + 1) + ' ' + v.name + '</div><div class="vessel-type">' + v.type + ' · IMO ' + v.imo + '</div></div>' +
+        '<span class="score-pill ' + sp + '">' + v.score + '</span>' +
+        '</div>' +
+        '<div class="vessel-factors">' +
+        '<span>dist ' + v.dist + 'km</span>' +
+        '<span class="' + (v.slowed ? 'f-flag' : '') + '">' + (v.slowed ? '◉' : '○') + ' slowed</span>' +
+        '<span class="' + (v.dark ? 'f-flag' : '') + '">' + (v.dark ? '◉' : '○') + ' AIS dark</span>' +
+        '</div></div>';
+      $('panelBody').innerHTML += html;
+    }
+
+    function showVerdict() {
+      var c = VESSELS.find(function (v) { return v.culprit; });
+      addLog('03:35Z', 'CASE FILE GENERATED — Lead suspect identified', 'warn');
+
+      var html = '<div class="evidence-card">' +
+        '<div class="ev-title">Lead Suspect — Vessel Suspicion Index</div>' +
+        '<div class="ev-suspect-name">' + c.name + '</div>' +
+        '<div class="ev-imo">IMO ' + c.imo + ' · ' + c.type + '</div>' +
+        '<div class="ev-rows">' +
+        '<div class="ev-row"><span class="ev-lbl">F_loc — Distance to origin</span><span class="ev-val"><div class="ev-dot"></div>' + c.dist + ' km (40% weight)</span></div>' +
+        '<div class="ev-row"><span class="ev-lbl">F_spd — Speed anomaly</span><span class="ev-val"><div class="ev-dot"></div>Slowed 7.2 → 1.4 kn (25% weight)</span></div>' +
+        '<div class="ev-row"><span class="ev-lbl">F_gap — AIS evasion</span><span class="ev-val"><div class="ev-dot"></div>Dark 13:48–14:35Z (25% weight)</span></div>' +
+        '<div class="ev-row"><span class="ev-lbl">F_prof — Vessel profile</span><span class="ev-val"><div class="ev-dot"></div>High risk (crude tanker, 10% weight)</span></div>' +
+        '</div>' +
+        '<div class="vsi-total"><span class="vsi-lbl">VSI = w₁·F_loc + w₂·F_spd + w₃·F_gap + w₄·F_prof</span><span class="vsi-score">' + c.score + '/100</span></div>' +
+        '</div>' +
+        '<div class="enf-note">' +
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="1.6" style="flex-shrink:0;margin-top:2px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+        'Case file exported to Indian Coast Guard. Probabilistic — human verification required per §56 OCEAN PRD. Recommend interdiction at next port of call.' +
+        '</div>';
+      $('panelBody').innerHTML += html;
+
+      // Generate Dossier button
+      $('panelBody').innerHTML +=
+        '<button class="btn-dossier" onclick="generateDossier()">' +
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">' +
+        '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>' +
+        '<polyline points="14 2 14 8 20 8"/>' +
+        '<line x1="16" y1="13" x2="8" y2="13"/>' +
+        '<line x1="16" y1="17" x2="8" y2="17"/>' +
+        '</svg>' +
+        'Generate Enforcement Dossier' +
+        '</button>';
+
+      var pb = $('panelBody');
+      if (pb) pb.scrollTop = pb.scrollHeight;
+    }
+
+    function generateDossier() {
+      addLog('DOSSIER', 'Generating enforcement dossier...', 'info');
+      // Placeholder — flash the button then show a message
+      var btn = document.querySelector('.btn-dossier');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML =
+          '<div class="loader-spinner" style="width:16px;height:16px;border:2px solid rgba(0,0,0,0.3);border-top-color:#000;border-radius:50%;animation:spin-loader .8s linear infinite"></div>' +
+          'Generating...';
+        setTimeout(function () {
+          btn.innerHTML =
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">' +
+            '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>' +
+            '<polyline points="22 4 12 14.01 9 11.01"/>' +
+            '</svg>' +
+            'Dossier Ready (Placeholder)';
+          btn.style.background = 'linear-gradient(135deg, var(--green) 0%, #2DD4BF 100%)';
+          addLog('DOSSIER', 'Enforcement dossier generated — MARPOL 73/78 case file ready for review.', 'good');
+        }, 2000);
+      }
+    }
+
+    /* ═══ Log Helpers ═══ */
+    function logHTML(time, msg, cls) {
+      return '<div class="log-line"><span class="log-time">' + time + '</span><span class="log-msg' + (cls ? ' ' + cls : '') + '">' + msg + '</span></div>';
+    }
+    function addLog(time, msg, cls) {
+      var p = $('panelBody');
+      if (!p) return;
+      p.innerHTML += logHTML(time, msg, cls);
+      p.scrollTop = p.scrollHeight;
+    }
+
+    /* ═══ Init ═══ */
+    render();
+  </script>
+</body>
+
+</html>

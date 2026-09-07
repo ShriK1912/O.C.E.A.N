@@ -1,0 +1,10 @@
+numpy
+xarray
+shapely
+scipy
+netCDF4
+h5netcdf
+rasterio
+tensorflow
+opencv-python-headless
+flask

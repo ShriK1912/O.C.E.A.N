@@ -1,0 +1,18 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[72.55, 18.80], [72.55, 18.75], [72.60, 18.75], [72.60, 18.80], [72.55, 18.80]]]
+      },
+      "properties": {
+        "label": "Oil Spill Slick",
+        "confidence": 98.4,
+        "spill_id": "SPILL_MUMBAI_001",
+        "detection_time_utc": "2026-09-01T04:00:00Z"
+      }
+    }
+  ]
+}

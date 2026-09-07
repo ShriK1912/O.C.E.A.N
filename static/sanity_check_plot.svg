@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" style="background:white;font-family:sans-serif">
+                <text x="400" y="50" text-anchor="middle" font-size="20">Origin cone at 36.0h before detection</text>
+                <text x="400" y="80" text-anchor="middle" font-size="16">vs. detected slick location</text>
+                <path d="M 200,400 L 250,420 L 300,380 L 220,350 Z" fill="rgba(0,0,255,0.2)" stroke="blue" stroke-width="2"/>
+                <path d="M 500,200 L 600,150 L 700,250 L 550,300 Z" fill="rgba(255,210,127,0.5)" stroke="#ffd27f"/>
+                <path d="M 530,210 L 600,170 L 670,240 L 560,280 Z" fill="rgba(255,140,0,0.5)" stroke="#ff8c00"/>
+                <path d="M 550,220 L 600,190 L 650,230 L 570,260 Z" fill="rgba(179,0,0,0.5)" stroke="#b30000"/>
+                <path d="M 600,220 L 610,210 L 620,220 L 610,230 Z" fill="black"/>
+                <rect x="50" y="100" width="200" height="120" fill="white" stroke="black"/>
+                <text x="60" y="125" font-size="12">Detected slick (input)</text>
+                <text x="60" y="145" font-size="12">50% band</text>
+                <text x="60" y="165" font-size="12">75% band</text>
+                <text x="60" y="185" font-size="12">95% band</text>
+                <text x="60" y="205" font-size="12">Best-estimate origin</text>
+            </svg>

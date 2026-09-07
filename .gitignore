@@ -1,0 +1,21 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Python / Environment
+venv/
+__pycache__/
+*.pyc
+.env
+*.log
+
+# Large Model Files
+*.h5
+
+# Node / build artefacts
+node_modules/
+dist/
