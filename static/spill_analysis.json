@@ -1,10 +1,10 @@
 {
-  "oil_pixels": 8600,
+  "oil_pixels": 1168,
   "total_pixels": 65536,
-  "oil_percentage": 13.12,
-  "confidence": 52.7,
+  "oil_percentage": 1.78,
+  "confidence": 59.34,
   "detection": "oil_spill",
-  "area_km2": 105.96,
+  "area_km2": 14.39,
   "detection_method": "Enhanced SAR class-aware dark-patch",
-  "image_source": "class_1_00004.jpg"
+  "image_source": "class_1_00003.jpg"
 }

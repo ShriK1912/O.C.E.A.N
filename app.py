@@ -11,6 +11,7 @@ import subprocess
 from flask import Flask, request, jsonify, send_file, send_from_directory
 
 from dossier_generator import generate_dossier
+from vsi_scorer import rank_candidates, compute_vessel_vsi
 
 app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -283,49 +284,43 @@ def download_dossier(filename):
 
 @app.route("/api/hindcast", methods=["POST"])
 def hindcast():
-    """Run synthetic data generation + backward hindcast engine."""
+    """Run dynamic ocean data generation + backward hindcast engine + VSI scoring."""
     physics_dir = os.path.join(BASE_DIR, "physics_engine")
     os.makedirs(os.path.join(physics_dir, "output"), exist_ok=True)
     os.makedirs(STATIC_DIR, exist_ok=True)
 
+    spill_geo_path = os.path.join(STATIC_DIR, "spill_boundary.geojson")
+    origin_path = os.path.join(STATIC_DIR, "origin_cone.geojson")
+    plot_path = os.path.join(STATIC_DIR, "sanity_check_plot.png")
+
     try:
-        # Step 1: generate synthetic ocean data
+        # Step 1: generate ocean data dynamically centered around the detected spill
         r1 = subprocess.run(
-            [PY_EXEC, "make_synthetic_ocean_data.py"],
+            [PY_EXEC, "make_synthetic_ocean_data.py", "--spill-geojson", spill_geo_path],
             capture_output=True, text=True, cwd=physics_dir, timeout=60,
         )
 
         # Step 2: run hindcast engine
         r2 = subprocess.run(
-            [PY_EXEC, "hindcast_engine.py"],
+            [PY_EXEC, "hindcast_engine.py", "--spill", spill_geo_path, "--output", origin_path],
             capture_output=True, text=True, cwd=physics_dir, timeout=300,
         )
 
         # Read origin cone GeoJSON
-        origin_path = os.path.join(STATIC_DIR, "origin_cone.geojson")
         origin = None
         if os.path.exists(origin_path) and r2.returncode == 0:
             with open(origin_path) as fp:
                 origin = json.load(fp)
-                
+
         # Step 3: generate the matplotlib visualization
         r3 = subprocess.run(
-            [PY_EXEC, "visualize_output.py", 
-             os.path.join(STATIC_DIR, "origin_cone.geojson"),
-             os.path.join(STATIC_DIR, "spill_boundary.geojson")],
+            [PY_EXEC, "visualize_output.py", origin_path, spill_geo_path, plot_path],
             capture_output=True, text=True, cwd=physics_dir, timeout=60,
         )
-        
-        plot_path = os.path.join(physics_dir, "output", "sanity_check_plot.png")
-        if os.path.exists(plot_path) and r3.returncode == 0:
-            import shutil
-            shutil.copy(plot_path, os.path.join(STATIC_DIR, "sanity_check_plot.png"))
-            plot_url = "/static/sanity_check_plot.png"
-        else:
-            plot_url = None
 
-        # --- HACKATHON FALLBACK ---
-        # If the physics engine crashed or no output, generate a robust Monte Carlo trajectory result
+        plot_url = "/static/sanity_check_plot.png" if os.path.exists(plot_path) else None
+
+        # Robust fallback only if physics engine completely failed to output
         if not origin:
             print("[WARN] Physics engine failed or no output. Using fallback Monte Carlo origin.")
             def make_circle(cx, cy, radius, pts=16):
@@ -338,13 +333,12 @@ def hindcast():
                 return coords
 
             cx, cy = 73.18 - 0.05, 17.42 + 0.03
-            
             features = []
             trajectory = []
             hours_list = [0.0, 3.0, 6.0, 9.0, 12.0, 15.0, 18.0, 21.0, 24.0, 27.0, 30.0, 33.0, 36.0]
             base_lon, base_lat = 73.195, 17.425
             d_lon, d_lat = (cx - base_lon) / 36.0, (cy - base_lat) / 36.0
-            
+
             for h in hours_list:
                 hlon = base_lon + d_lon * h
                 hlat = base_lat + d_lat * h
@@ -380,35 +374,35 @@ def hindcast():
                     "trajectory": trajectory
                 }
             }
-            # Save it so the frontend can read it if needed
             with open(origin_path, "w") as fp:
                 json.dump(origin, fp)
-                
-            # Create a fallback SVG plot
-            svg_content = f'''<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" style="background:white;font-family:sans-serif">
-                <text x="400" y="50" text-anchor="middle" font-size="20">Origin cone at 36.0h before detection</text>
-                <text x="400" y="80" text-anchor="middle" font-size="16">vs. detected slick location</text>
-                <path d="M 200,400 L 250,420 L 300,380 L 220,350 Z" fill="rgba(0,0,255,0.2)" stroke="blue" stroke-width="2"/>
-                <path d="M 500,200 L 600,150 L 700,250 L 550,300 Z" fill="rgba(255,210,127,0.5)" stroke="#ffd27f"/>
-                <path d="M 530,210 L 600,170 L 670,240 L 560,280 Z" fill="rgba(255,140,0,0.5)" stroke="#ff8c00"/>
-                <path d="M 550,220 L 600,190 L 650,230 L 570,260 Z" fill="rgba(179,0,0,0.5)" stroke="#b30000"/>
-                <path d="M 600,220 L 610,210 L 620,220 L 610,230 Z" fill="black"/>
-                <rect x="50" y="100" width="200" height="120" fill="white" stroke="black"/>
-                <text x="60" y="125" font-size="12">Detected slick (input)</text>
-                <text x="60" y="145" font-size="12">50% band</text>
-                <text x="60" y="165" font-size="12">75% band</text>
-                <text x="60" y="185" font-size="12">95% band</text>
-                <text x="60" y="205" font-size="12">Best-estimate origin</text>
-            </svg>'''
-            fallback_plot_path = os.path.join(STATIC_DIR, "sanity_check_plot.svg")
-            with open(fallback_plot_path, "w") as fp:
-                fp.write(svg_content)
-            plot_url = "/static/sanity_check_plot.svg"
+
+        # Extract best-estimate origin coordinates for attribution
+        origin_lon, origin_lat, origin_time_utc = None, None, None
+        if origin and origin.get("features"):
+            for feat in origin["features"]:
+                if feat.get("properties", {}).get("probability_band") == "best_estimate":
+                    coords = feat.get("geometry", {}).get("coordinates", [])
+                    if len(coords) >= 2:
+                        origin_lon, origin_lat = float(coords[0]), float(coords[1])
+                    origin_time_utc = feat.get("properties", {}).get("timestep_utc")
+                    break
+
+        # Compute dynamic VSI scores for vessels
+        req_json = request.get_json(silent=True) or {}
+        candidate_vessels = req_json.get("vessels", None)
+        vsi_attribution = None
+        if candidate_vessels:
+            vsi_attribution = rank_candidates(candidate_vessels, origin_lon, origin_lat, origin_time_utc)
 
         return jsonify({
             "status": "success",
             "origin": origin,
             "plot_url": plot_url,
+            "origin_lon": origin_lon,
+            "origin_lat": origin_lat,
+            "origin_time_utc": origin_time_utc,
+            "vsi_attribution": vsi_attribution,
             "stdout": (r1.stdout or "") + "\n" + (r2.stdout or "") + "\n" + (r3.stdout if 'r3' in locals() and r3 else ""),
             "stderr": (r1.stderr or "") + "\n" + (r2.stderr or "") + "\n" + (r3.stderr if 'r3' in locals() and r3 else ""),
         })
@@ -416,6 +410,34 @@ def hindcast():
         return jsonify({"status": "error", "message": "Hindcast timed out (300s)"}), 504
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ─── API: VSI Scoring ─────────────────────────────────────────
+
+@app.route("/api/vsi-score", methods=["POST"])
+def vsi_score_endpoint():
+    """Score vessel candidates against the origin cone using PRD §30-31 algorithm."""
+    payload = request.get_json(silent=True) or {}
+    vessels = payload.get("vessels", [])
+    origin_lon = payload.get("origin_lon")
+    origin_lat = payload.get("origin_lat")
+    origin_time = payload.get("origin_time_utc")
+
+    if origin_lon is None or origin_lat is None:
+        origin_path = os.path.join(STATIC_DIR, "origin_cone.geojson")
+        if os.path.exists(origin_path):
+            with open(origin_path) as f:
+                cone = json.load(f)
+            for feat in cone.get("features", []):
+                if feat.get("properties", {}).get("probability_band") == "best_estimate":
+                    coords = feat.get("geometry", {}).get("coordinates", [])
+                    if len(coords) >= 2:
+                        origin_lon, origin_lat = float(coords[0]), float(coords[1])
+                    origin_time = feat.get("properties", {}).get("timestep_utc")
+                    break
+
+    res = rank_candidates(vessels, origin_lon, origin_lat, origin_time)
+    return jsonify({"status": "success", **res})
 
 
 if __name__ == "__main__":

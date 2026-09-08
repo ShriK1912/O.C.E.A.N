@@ -1,14 +1,15 @@
 """
-Loads CMEMS current and ERA5 wind NetCDF files and provides a single
-interpolation function that returns the combined (current + windage)
-velocity vector at any lon/lat/time inside the data's coverage.
+Loads CMEMS current and ERA5 wind NetCDF files and provides high-speed
+vectorized interpolation that returns the combined (current + windage)
+velocity vector at any batch of (lon, lat, time) points.
 
-This is the piece the earlier draft skipped -- everything downstream
-is worthless if this doesn't actually read your real environmental data.
+Uses scipy.interpolate.RegularGridInterpolator for ultra-fast evaluation
+during Monte Carlo backward integration.
 """
 
 import numpy as np
 import xarray as xr
+from scipy.interpolate import RegularGridInterpolator
 
 import config
 
@@ -25,27 +26,35 @@ def load_dataset(path):
         )
 
 
-def _interp_component(ds, var_name, lon_name, lat_name, time_name, lons, lats, times):
+def _build_grid_interpolator(ds, var_name, lon_name, lat_name, time_name):
     """
-    Interpolate one velocity component at arbitrary (lon, lat, time) points.
-    Falls back to nearest-neighbor at the edges instead of returning NaN,
-    since a backward trajectory that drifts slightly outside the downloaded
-    bounding box should degrade gracefully, not silently zero out.
+    Build a RegularGridInterpolator for a 3D dataset variable.
+    Ensures all coordinate axes are strictly ascending (flipping if needed).
     """
     da = ds[var_name]
-    # xarray vectorized interpolation: pass DataArrays of matching points
-    pts = {
-        lon_name: xr.DataArray(lons, dims="points"),
-        lat_name: xr.DataArray(lats, dims="points"),
-        time_name: xr.DataArray(times, dims="points"),
+    dims = list(da.dims)
+    data = da.values.copy()
+
+    coords_raw = {
+        time_name: da[time_name].values.astype("datetime64[s]").astype(np.float64),
+        lat_name: da[lat_name].values.astype(np.float64),
+        lon_name: da[lon_name].values.astype(np.float64),
     }
-    interpolated = da.interp(**pts, method="linear")
-    values = interpolated.values
-    if np.isnan(values).any():
-        nearest = da.interp(**pts, method="nearest")
-        nn_values = nearest.values
-        values = np.where(np.isnan(values), nn_values, values)
-    return values
+
+    grid_axes = []
+    for axis_idx, dim_name in enumerate(dims):
+        coords = coords_raw[dim_name]
+        if len(coords) > 1 and coords[1] < coords[0]:
+            # Coordinates are descending; flip axis
+            coords = np.flip(coords)
+            data = np.flip(data, axis=axis_idx)
+        grid_axes.append(coords)
+
+    # bounds_error=False, fill_value=None allows nearest extrapolation at boundaries
+    interp = RegularGridInterpolator(
+        tuple(grid_axes), data, method="linear", bounds_error=False, fill_value=None
+    )
+    return interp, dims
 
 
 class VelocityField:
@@ -63,6 +72,29 @@ class VelocityField:
         self.cv = config.CURRENT_VARS
         self.wv = config.WIND_VARS
 
+        # Pre-build fast interpolators
+        self._curr_u_interp, self._curr_u_dims = _build_grid_interpolator(
+            self.ds_curr, self.cv["u"], self.cv["lon"], self.cv["lat"], self.cv["time"]
+        )
+        self._curr_v_interp, _ = _build_grid_interpolator(
+            self.ds_curr, self.cv["v"], self.cv["lon"], self.cv["lat"], self.cv["time"]
+        )
+        self._wind_u_interp, self._wind_u_dims = _build_grid_interpolator(
+            self.ds_wind, self.wv["u"], self.wv["lon"], self.wv["lat"], self.wv["time"]
+        )
+        self._wind_v_interp, _ = _build_grid_interpolator(
+            self.ds_wind, self.wv["v"], self.wv["lon"], self.wv["lat"], self.wv["time"]
+        )
+
+    def _eval_field(self, interp, dims, lon_name, lat_name, time_name, lons, lats, times_sec):
+        dim_map = {
+            time_name: times_sec,
+            lat_name: lats,
+            lon_name: lons,
+        }
+        pts = np.column_stack([dim_map[d] for d in dims])
+        return interp(pts)
+
     def total_velocity(self, lons, lats, times):
         """
         lons, lats: 1D arrays of positions (degrees)
@@ -70,22 +102,29 @@ class VelocityField:
         Returns (u_total, v_total) in m/s -- current plus windage-scaled wind,
         NOT yet sign-flipped for backward integration (caller's job).
         """
-        u_curr = _interp_component(
-            self.ds_curr, self.cv["u"], self.cv["lon"], self.cv["lat"], self.cv["time"],
-            lons, lats, times,
+        times_sec = times.astype("datetime64[s]").astype(np.float64)
+
+        u_curr = self._eval_field(
+            self._curr_u_interp, self._curr_u_dims,
+            self.cv["lon"], self.cv["lat"], self.cv["time"],
+            lons, lats, times_sec
         )
-        v_curr = _interp_component(
-            self.ds_curr, self.cv["v"], self.cv["lon"], self.cv["lat"], self.cv["time"],
-            lons, lats, times,
+        v_curr = self._eval_field(
+            self._curr_v_interp, self._curr_u_dims,
+            self.cv["lon"], self.cv["lat"], self.cv["time"],
+            lons, lats, times_sec
         )
-        u_wind = _interp_component(
-            self.ds_wind, self.wv["u"], self.wv["lon"], self.wv["lat"], self.wv["time"],
-            lons, lats, times,
+        u_wind = self._eval_field(
+            self._wind_u_interp, self._wind_u_dims,
+            self.wv["lon"], self.wv["lat"], self.wv["time"],
+            lons, lats, times_sec
         )
-        v_wind = _interp_component(
-            self.ds_wind, self.wv["v"], self.wv["lon"], self.wv["lat"], self.wv["time"],
-            lons, lats, times,
+        v_wind = self._eval_field(
+            self._wind_v_interp, self._wind_u_dims,
+            self.wv["lon"], self.wv["lat"], self.wv["time"],
+            lons, lats, times_sec
         )
+
         u_total = u_curr + config.WIND_DRIFT_FACTOR * u_wind
         v_total = v_curr + config.WIND_DRIFT_FACTOR * v_wind
         return u_total, v_total
